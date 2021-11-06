@@ -374,7 +374,7 @@ tOut.Position(1:2)  = [hb_v_up_10.Position(1)+15+2 hb_stopLock.Position(2) - 30]
 % Time Set
 tdT = uitable('parent',hpLock,'RowName',{'dT set (ms)'},'ColumnName',{},...
     'fontsize',10,'data',[npt.Delta],...
-    'ColumnWidth',{67},'ColumnEditable',true);
+    'ColumnWidth',{67},'ColumnEditable',true,'columnformat',{'numeric'});
 tdT.Position(3:4)  =  tdT.Extent(3:4);
 tdT.Position(1:2)  = [2 tOut.Position(2) - 30];
 
@@ -389,7 +389,7 @@ tLockB.Position(1:2)  = [2 tdT.Position(2) - tLockB.Extent(4)-10];
 % Lock Settings
 n = {'T start (ms)', 'T stop (ms)','hyst. (ms)','step (mV)'};
 tLockA = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
-    'fontsize',10,'data',[npt.tLim(1); npt.tLim(2); npt.delay; npt.dv],...
+    'fontsize',10,'data',[npt.tLim(1); npt.tLim(2); npt.hysteresis; npt.dv],...
     'ColumnWidth',{55},'ColumnEditable',true,'CellEditCallback',@chLockA);
 tLockA.Position(3:4)  =  tLockA.Extent(3:4);
 tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
@@ -403,11 +403,10 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
                 t1Old   = b.PreviousData;
                 t2      = a.Data(2);
                 if isnumeric(t1New) && t1New > 0 && t1New < 1000 && t1New < t2
-                    a.Data(1) = t1New; 
+                    a.Data(1)   = t1New; 
                     npt.tLim(1) = t1New;
                 else
                     a.Data(1) = t1Old; 
-                    drawnow;
                     warning('invalid time limit');
                 end
             case 2
@@ -415,13 +414,33 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
                 t2Old   = b.PreviousData;
                 t1      = a.Data(1);
                 if isnumeric(t2New) && t2New > 0 && t2New < 1000 && t2New > t1
-                    a.Data(2) = t2New; 
+                    a.Data(2)   = t2New; 
                     npt.tLim(2) = t2New;
                 else
                     a.Data(2) = t2Old; 
-                    drawnow;
                     warning('invalid time limit');
                 end
+            case 3
+                tHNew   = b.NewData;
+                tHOld   = b.PreviousData;
+                if isnumeric(tHNew) && tHNew > 0 && tHNew < 5
+                    a.Data(3)       = tHNew;
+                    npt.hysteresis  = tHNew;
+                else
+                    a.Data(3)       = tHOld;
+                    warning('invalid hysteresis time');
+                end
+            case 4
+                vNew   = b.NewData;
+                vOld   = b.PreviousData;
+                if isnumeric(vNew) && vNew > 0 && vNew < 50
+                    a.Data(4)   = vNew;
+                    npt.dv      = vNew;
+                else
+                    a.Data(4)   = vOld;
+                    warning('invalid voltage step');
+                end               
+                
         end
       
     end

@@ -6,7 +6,6 @@ disp(repmat('-',1,60));disp([mfilename '.m']);disp(repmat('-',1,60));
 curpath = fileparts(mfilename('fullpath'));
 addpath(curpath);addpath(genpath(curpath))  
 
-
 tLim = [100 240];
 %% GUI Settings
 guiname = 'labjack_cavity';
@@ -17,44 +16,39 @@ h = findall(0,'tag','GUI');
 for ii=1:length(h)
     
     if isequal(h(ii).Name,guiname)        
-        warning(['iXon GUI instance detected.  Bringing into focus. ' ...
-            ' If you want to start a new instance, close the original iXon GUI.']); 
+        warning(['Cavity GUI instance detected.  Bringing into focus. ' ...
+            ' If you want to start a new instance, close the original cavity GUI.']); 
        figure(h(ii));
        return;
     end    
 end
-    %% Default Settings
+
+%% Default Settings
 npt = struct;
 
-% Labckjack configuration
-% npt.myip="192.168.1.193";
-npt.myip="192.168.1.124";
+% Labckjack default ip address
+npt.myip='192.168.1.124';
 
 % Digital trigger channel
 npt.TRIGGER_NAME='DIO0'; % aka DIO0, must be DIO0 or DIO1 for triggered stream
 
-% Analog channels to measure
+% Analog input channels
+npt.names = ['cavity','scan'];
 npt.ScanListNames = {'AIN0','AIN1'} ;
-% npt.ScanListNames = {'AIN0'} ;
-
 npt.numAddresses = length(npt.ScanListNames);
 
+% Analog output channels
 npt.OUT = 'DAC0';
-
-
-% Names for each analog channel
-npt.names = ['cavity','scan'];
-% npt.names = ['cavity'];
-
 npt.outName = 'DAC0';
 
 % Default acquisition speed
 npt.scanRate = 20e3;
 npt.numScans = 5000;
 
-%npt.LockMode=2;
- npt.LockMode=4;
+% Default lock mode
+npt.LockMode=4;
 
+% Acquisition is default off
 npt.doAcq = 0;
 %% Load LJM
 % Make the LJM .NET assembly visible in MATLAB
@@ -65,7 +59,7 @@ t = ljmAsm.AssemblyHandle.GetType('LabJack.LJM+CONSTANTS');
 LJM_CONSTANTS = System.Activator.CreateInstance(t);
 npt.handle = 0;
 
-%% Main GIUI
+%% Figure and Panels
 
 % Initialize the primary figure
 hF=figure;
@@ -73,7 +67,8 @@ clf
 
 set(hF,'Color','w','units','pixels','Name',guiname,...
     'toolbar','figure','Tag','GUI','CloseRequestFcn',@closeGUI,...
-    'NumberTitle','off','Position',[50 50 600 500]);
+    'NumberTitle','off','Position',[50 50 600 500],...
+    'SizeChangedFcn',@figResize);
 
 
 % Callback for when the GUI is requested to be closed.
@@ -91,59 +86,114 @@ set(hF,'Color','w','units','pixels','Name',guiname,...
         delete(fig);                % Delete the figure
     end
 
-ax = axes;
-set(ax,'box','on','linewidth',1,'xgrid','on',...
-    'ygrid','on','fontsize',10);
+hpCon = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
+    'title','connect');
+hpCon.Position = [1 hF.Position(4)-75 200 75];
+
+hpAcq = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
+    'title','acquisition');
+hpAcq.Position = [1 hF.Position(4)-275 200 200];
+
+hpLock = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
+    'title','lock');
+hpLock.Position = [1 1 200 hF.Position(4) - hpAcq.Position(4) - hpCon.Position(4)];
+
+hpAx = uipanel('parent',hF,'units','pixels','backgroundcolor','w');
+hpAx.Position = [hpCon.Position(3) 1 hF.Position(3)-hpCon.Position(3) hF.Position(4)];
+
+
+%% Resize Callback
+    function figResize(fig,~)
+       if fig.Position(3) > 400 && fig.Position(4) > 400
+        
+           hpCon.Position(2) = hF.Position(4) - hpCon.Position(4);
+           hpAcq.Position(2) = hpCon.Position(2) - hpAcq.Position(4);
+           hpLock.Position(4) = hpAcq.Position(2);
+           
+           hpAx.Position(3:4) = [hF.Position(3)-hpCon.Position(3) hF.Position(4)];
+       
+       end
+    end
+
+%% Main plots
+
+% ax = axes('parent',hpAx);
+ax = subplot(3,1,[1 2],'Parent',hpAx);
+set(ax,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
 xlabel('time (ms)');
 ylabel('voltage (V)');
 hold on
-pData = plot(1,1,'k-');
 
+% Data plot
+pData = plot(1,1,'k-');
 yyaxis right
-sData = plot(1,1,'-');
+
+% Ramp Plot
+sData = plot(1,1,'-');                  
+% Low Time limit Plot
 pLim1 = plot(tLim(1)*[1 1],[0 10],'g--','linewidth',2);
+% High Time limit plot
 pLim2 = plot(tLim(2)*[1 1],[0 10],'g--','linewidth',2);
 
-pPeakA = plot(1,1,'rx');
-pPeakA.Visible='off';
+% Peak A plot
+pPeakA = plot(1,1,'rx','Visible','off');
 
-pPeakB = plot(1,1,'bx');
-pPeakB.Visible='off';
-
-pDelta = plot(1,1,'k-');
-pDelta.Visible='off';
-tDelta = text(1,1,'a','units','data','verticalalignment','bottom',...
-    'horizontalalignment','center','fontsize',8,'color','k',...
-    'Visible','off');
-
-pFSRA = plot(1,1,'r-');
-pFSRA.Visible='off';
+% FSR A Plot
+pFSRA = plot(1,1,'r-','Visible','off');
 tFSRA = text(1,1,'a','units','data','verticalalignment','bottom',...
     'horizontalalignment','center','fontsize',8,'color','r',...
     'Visible','off');
 
-pFSRB = plot(1,1,'b-');
-pFSRB.Visible='off';
+% Peak B Plot
+pPeakB = plot(1,1,'bx','Visible','off');
+
+% FSR B Plot
+pFSRB = plot(1,1,'b-','Visible','off');
 tFSRB = text(1,1,'a','units','data','verticalalignment','bottom',...
     'horizontalalignment','center','fontsize',8,'color','b',...
     'Visible','off');
 
+% Peak Delta Plot
+pDelta = plot(1,1,'k-','Visible','off');
+
+% Delta t text
+tDelta = text(1,1,'a','units','data','verticalalignment','bottom',...
+    'horizontalalignment','center','fontsize',8,'color','k',...
+    'Visible','off');
+
+% Output Voltage
 tOutput= text(.01,.01,'OUTPUT','units','normalized','verticalalignment','bottom',...
     'horizontalalignment','left','fontsize',16,'color','k',...
     'Visible','on');
 
+%
+ax = subplot(3,1,3,'Parent',hpAx);
+set(ax,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
+xlabel('time');
+hold on
+
+%% Connection and Acquisition
+
 % Connect
 ttStr = 'Connect';
-hb_connect=uicontrol(hF,'style','pushbutton','string','connect','Fontsize',10,...
-    'Backgroundcolor','w','Position',[1 1 80 20],'Callback',@doConnect,...
+hb_connect=uicontrol(hpCon,'style','pushbutton','string','connect','Fontsize',10,...
+    'Backgroundcolor','w','Callback',@doConnect,...
     'ToolTipString',ttStr,'backgroundcolor',[80 200 120]/255,'enable','on');
+hb_connect.Position = [2 hpCon.Position(4)-40 70 20];
 
 % Disconnect
 ttStr = 'Disconnect';
-hb_disconnect=uicontrol(hF,'style','pushbutton','string','disconnect','Fontsize',10,...
+hb_disconnect=uicontrol(hpCon,'style','pushbutton','string','disconnect','Fontsize',10,...
     'Backgroundcolor','w','Position',[81 1 80 20],'Callback',@doDisconnect,...
     'ToolTipString',ttStr,'backgroundcolor',[255 102 120]/255,...
     'enable','off');
+hb_disconnect.Position =hb_connect.Position + [71 0 25 0];
+
+% Ethernet IP address
+tIP = uitable('parent',hpCon,'RowName',{'IP '},'ColumnName',{},...
+    'fontsize',10,'data',{npt.myip},'ColumnWidth',{120},'ColumnEditable',true);
+tIP.Position(3:4)=tIP.Extent(3:4);
+tIP.Position(1:2) = [2 hb_connect.Position(2) - 30];
 
     function doConnect(~,~)
         disp('Connecting to labjack');
@@ -155,7 +205,6 @@ hb_disconnect=uicontrol(hF,'style','pushbutton','string','disconnect','Fontsize'
         hb_startAcq.Enable='on';
         hb_stopAcq.Enable='off';
         hb_force.Enable='on';
-
     end
 
     function doDisconnect(~,~)
@@ -170,23 +219,35 @@ hb_disconnect=uicontrol(hF,'style','pushbutton','string','disconnect','Fontsize'
         hb_force.Enable='off';
     end
 
-% start
-ttStr = 'Force';
-hb_force=uicontrol(hF,'style','pushbutton','string','force','Fontsize',10,...
-    'Backgroundcolor','w','Position',[162 1 40 20],'Callback',@force,...
-    'ToolTipString',ttStr,'enable','off');
+%% Acquisition
 
 % start
-ttStr = 'Start acquisition';
-hb_startAcq=uicontrol(hF,'style','pushbutton','string','start acquire','Fontsize',10,...
-    'Backgroundcolor','w','Position',[203 1 40 20],'Callback',@startAcq,...
-    'ToolTipString',ttStr,'enable','off','backgroundcolor',[80 200 120]/255);
+ttStr = 'Force Acq';
+hb_force=uicontrol(hpAcq,'style','pushbutton','string','force','Fontsize',10,...
+    'Backgroundcolor',[255,165,0]/255,'Callback',@force,...
+    'ToolTipString',ttStr,'enable','off');
+hb_force.Position = [2 hpAcq.Position(4)-40 50 20];
+
+% start
+ttStr = 'Start Acq';
+hb_startAcq=uicontrol(hpAcq,'style','pushbutton','string','start','Fontsize',10,...
+    'Backgroundcolor','w','Callback',@startAcq,...
+    'ToolTipString',ttStr,'enable','off','backgroundcolor',[137 207 240]/255);
+hb_startAcq.Position = hb_force.Position + [52 0 0 0];
 
 % Stop
 ttStr = 'Stop acquisition';
-hb_stopAcq=uicontrol(hF,'style','pushbutton','string','stop acquire','Fontsize',10,...
+hb_stopAcq=uicontrol(hpAcq,'style','pushbutton','string','stop','Fontsize',10,...
     'Backgroundcolor','w','Position',[244 1 40 20],'Callback',@stopAcq,...
     'ToolTipString',ttStr,'enable','off','backgroundcolor',[255 102 120]/255);
+hb_stopAcq.Position = hb_startAcq.Position + [50 0 0 0];
+
+% Acquisition Settings
+n = {'Rate (Hz)', 'Num Scans'};
+tAcq = uitable('parent',hpAcq,'RowName',n,'ColumnName',{},...
+    'fontsize',10,'data',[npt.scanRate; npt.numScans],'ColumnWidth',{50},'ColumnEditable',true);
+tAcq.Position(3:4)  =  tAcq.Extent(3:4);
+tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 50];
 
     function force(~,~)
         disp([datestr(now,13) ' Forcing acquisition.']);
@@ -225,7 +286,7 @@ hb_stopAcq=uicontrol(hF,'style','pushbutton','string','stop acquire','Fontsize',
         drawnow;                
         stop(timer_labjack);    
     end
-
+%% Lock Graphics and Callbacks
 
 % start
 ttStr = 'Start lock';

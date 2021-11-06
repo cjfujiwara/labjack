@@ -6,7 +6,6 @@ disp(repmat('-',1,60));disp([mfilename '.m']);disp(repmat('-',1,60));
 curpath = fileparts(mfilename('fullpath'));
 addpath(curpath);addpath(genpath(curpath))  
 
-tLim = [100 240];
 %% GUI Settings
 guiname = 'labjack_cavity';
 
@@ -44,6 +43,11 @@ npt.outName = 'DAC0';
 % Default acquisition speed
 npt.scanRate = 20e3;
 npt.numScans = 5000;
+npt.delay = 0.2;
+
+% Time Limits (ms)
+npt.tLim = [100 240];
+npt.dv = 1;
 
 % Default lock mode
 npt.LockMode=4;
@@ -92,11 +96,11 @@ hpCon.Position = [1 hF.Position(4)-75 200 75];
 
 hpAcq = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
     'title','acquisition');
-hpAcq.Position = [1 hF.Position(4)-275 200 200];
+hpAcq.Position = [1 hF.Position(4)-195 200 120];
 
 hpLock = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
     'title','lock');
-hpLock.Position = [1 1 200 hF.Position(4) - hpAcq.Position(4) - hpCon.Position(4)];
+hpLock.Position = [1 hF.Position(4)-335 200 140];
 
 hpAx = uipanel('parent',hF,'units','pixels','backgroundcolor','w');
 hpAx.Position = [hpCon.Position(3) 1 hF.Position(3)-hpCon.Position(3) hF.Position(4)];
@@ -108,10 +112,9 @@ hpAx.Position = [hpCon.Position(3) 1 hF.Position(3)-hpCon.Position(3) hF.Positio
         
            hpCon.Position(2) = hF.Position(4) - hpCon.Position(4);
            hpAcq.Position(2) = hpCon.Position(2) - hpAcq.Position(4);
-           hpLock.Position(4) = hpAcq.Position(2);
+           hpLock.Position(2) = hpAcq.Position(2) - hpLock.Position(4);
            
-           hpAx.Position(3:4) = [hF.Position(3)-hpCon.Position(3) hF.Position(4)];
-       
+           hpAx.Position(3:4) = [hF.Position(3)-hpCon.Position(3) hF.Position(4)];       
        end
     end
 
@@ -131,9 +134,9 @@ yyaxis right
 % Ramp Plot
 sData = plot(1,1,'-');                  
 % Low Time limit Plot
-pLim1 = plot(tLim(1)*[1 1],[0 10],'g--','linewidth',2);
+pLim1 = plot(npt.tLim(1)*[1 1],[0 10],'g--','linewidth',2);
 % High Time limit plot
-pLim2 = plot(tLim(2)*[1 1],[0 10],'g--','linewidth',2);
+pLim2 = plot(npt.tLim(2)*[1 1],[0 10],'g--','linewidth',2);
 
 % Peak A plot
 pPeakA = plot(1,1,'rx','Visible','off');
@@ -169,7 +172,8 @@ tOutput= text(.01,.01,'OUTPUT','units','normalized','verticalalignment','bottom'
 %
 ax = subplot(3,1,3,'Parent',hpAx);
 set(ax,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
-xlabel('time');
+xlabel('time ago (s)');
+xlim([0 60]);
 hold on
 
 %% Connection and Acquisition
@@ -224,7 +228,7 @@ tIP.Position(1:2) = [2 hb_connect.Position(2) - 30];
 % start
 ttStr = 'Force Acq';
 hb_force=uicontrol(hpAcq,'style','pushbutton','string','force','Fontsize',10,...
-    'Backgroundcolor',[255,165,0]/255,'Callback',@force,...
+    'Backgroundcolor',[255,255,255]/255,'Callback',@force,...
     'ToolTipString',ttStr,'enable','off');
 hb_force.Position = [2 hpAcq.Position(4)-40 50 20];
 
@@ -232,22 +236,23 @@ hb_force.Position = [2 hpAcq.Position(4)-40 50 20];
 ttStr = 'Start Acq';
 hb_startAcq=uicontrol(hpAcq,'style','pushbutton','string','start','Fontsize',10,...
     'Backgroundcolor','w','Callback',@startAcq,...
-    'ToolTipString',ttStr,'enable','off','backgroundcolor',[137 207 240]/255);
+    'ToolTipString',ttStr,'enable','off','backgroundcolor',[85 205 252]/255);
 hb_startAcq.Position = hb_force.Position + [52 0 0 0];
 
 % Stop
 ttStr = 'Stop acquisition';
 hb_stopAcq=uicontrol(hpAcq,'style','pushbutton','string','stop','Fontsize',10,...
     'Backgroundcolor','w','Position',[244 1 40 20],'Callback',@stopAcq,...
-    'ToolTipString',ttStr,'enable','off','backgroundcolor',[255 102 120]/255);
-hb_stopAcq.Position = hb_startAcq.Position + [50 0 0 0];
+    'ToolTipString',ttStr,'enable','off','backgroundcolor',[247, 168, 184]/255);
+hb_stopAcq.Position = hb_startAcq.Position + [52 0 0 0];
 
 % Acquisition Settings
-n = {'Rate (Hz)', 'Num Scans'};
+n = {'Rate (Hz)', 'Num Scans','Delay (s)'};
 tAcq = uitable('parent',hpAcq,'RowName',n,'ColumnName',{},...
-    'fontsize',10,'data',[npt.scanRate; npt.numScans],'ColumnWidth',{50},'ColumnEditable',true);
+    'fontsize',10,'data',[npt.scanRate; npt.numScans; npt.delay],...
+    'ColumnWidth',{50},'ColumnEditable',true);
 tAcq.Position(3:4)  =  tAcq.Extent(3:4);
-tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 50];
+tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
 
     function force(~,~)
         disp([datestr(now,13) ' Forcing acquisition.']);
@@ -290,9 +295,25 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 50];
 
 % start
 ttStr = 'Start lock';
-hb_startLock=uicontrol(hF,'style','pushbutton','string','start lock','Fontsize',10,...
-    'Backgroundcolor','w','Position',[285 1 80 20],'Callback',@startLock,...
-    'ToolTipString',ttStr,'enable','off','backgroundcolor',[80 200 120]/255);
+hb_startLock=uicontrol(hpLock,'style','pushbutton','string','start lock','Fontsize',10,...
+    'Backgroundcolor','w','Callback',@startLock,...
+    'ToolTipString',ttStr,'enable','off','backgroundcolor',[137 207 240]/255);
+hb_startLock.Position = [2 hpLock.Position(4)-40 75 20];
+
+% Stop
+ttStr = 'Stop lock';
+hb_stopLock=uicontrol(hpLock,'style','pushbutton','string','stop lock','Fontsize',10,...
+    'Backgroundcolor','w','Position',[366 1 80 20],'Callback',@stopLock,...
+    'ToolTipString',ttStr,'enable','off','backgroundcolor',[255,165,0]/255);
+hb_stopLock.Position = hb_startLock.Position + [77 0 0 0];
+
+% Lock Settings
+n = {'T 1 (ms)', 'T 2 (ms)','T h (ms)','dV (mV)'};
+tAcq = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
+    'fontsize',10,'data',[npt.tLim(1); npt.tLim(2); npt.delay; npt.dv],...
+    'ColumnWidth',{60},'ColumnEditable',true);
+tAcq.Position(3:4)  =  tAcq.Extent(3:4);
+tAcq.Position(1:2)  = [2 hb_stopLock.Position(2) - 90];
 
     function startLock(~,~)
         disp([datestr(now,13) ' Engaging lock.']);
@@ -330,17 +351,12 @@ hb_startLock=uicontrol(hF,'style','pushbutton','string','start lock','Fontsize',
         npt.Delta = 0;
     end
 
-% Stop
-ttStr = 'Stop lock';
-hb_stopLock=uicontrol(hF,'style','pushbutton','string','stop lock','Fontsize',10,...
-    'Backgroundcolor','w','Position',[366 1 80 20],'Callback',@stopLock,...
-    'ToolTipString',ttStr,'enable','off','backgroundcolor',[255 102 120]/255);
 
 
 %% Timr Objects
 
 % Initialize the trig checker
-timer_labjack=timer('name','Labjack Cavity Timer','Period',.2,...
+timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
     'ExecutionMode','FixedSpacing','TimerFcn',@grabData);
 
     function grabData(~,~)
@@ -363,21 +379,20 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',.2,...
 
 %% Data Stuff
     function updateData(t,y)        
-%                         LabJack.LJM.eWriteName(npt.handle, npt.OUT, .61);
-
         % Update data
         set(pData,'XData',t,'YData',y(1,:));
         set(sData,'XData',t,'YData',y(2,:));
         set(pLim1,'Ydata',[-5 50]);
         set(pLim2,'Ydata',[-5 50]);
+    
 
         xlim([min(t) max(t)]);
         ylim([0 1.2]);
 
         % Find Peaks
         
-        i1 = t > tLim(1);
-        i2 = t < tLim(2);
+        i1 = t > npt.tLim(1);
+        i2 = t < npt.tLim(2);
         i = i1 & i2;
         
         [yPeak,Tp]=findpeaks(y(1,i),t(i),'MinPeakHeight',0.5,'MinPeakProminence',.4);        

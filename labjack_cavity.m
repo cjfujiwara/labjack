@@ -177,15 +177,16 @@ pLim1 = plot(npt.tLim(1)*[1 1],[0 10],'g--','linewidth',2);
 pLim2 = plot(npt.tLim(2)*[1 1],[0 10],'g--','linewidth',2);
 
 
+yyaxis left
+
 % History plot
 ax2 = subplot(3,1,3,'Parent',hpAx);
+
+pHis = plot(now,nan,'k-');
+datetick('x',13);
 set(ax2,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
 xlabel('time');
-xlim([0 60]);
-hold on
-datetick x
-
-pHis = plot(nan(Nhis,1)*now,nan(Nhis,1));
+ylabel('detuning (GHz');
 
 %% Connection and Acquisition
 
@@ -332,6 +333,7 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
         hb_v_up_10.Enable       = 'on';
         tLockB.Enable           = 'on';
         
+        set(pHis,'XData',now','YData',nan);
         
 
         npt.doLock              = 0;
@@ -598,9 +600,9 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
         set(pData,'XData',t,'YData',y(1,:));
         set(sData,'XData',t,'YData',y(2,:));
         set(pLim1,'Ydata',[0 max(y(2,:))]);
-        set(pLim2,'Ydata',[0 max(y(2,:))]);  
-        xlim([min(t) max(t)]);
-        ylim([0 1.2]);
+        set(pLim2,'Ydata',[0 max(y(2,:))]);
+        set(ax1,'XLim',[min(t) max(t)]);
+        set(ax1,'YLim',[0 1.2]);
         
 
 
@@ -664,14 +666,22 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             tLockB.Data(2) = FSR_A;
             tLockB.Data(3) = (Tdelta/FSR_A)*1.5;
             
-            tHis = circshift(pHis.Xdata,-1);
-            tHis(end) = now;
+            if length(pHis.XData) == Nhis
+                tHis = circshift(pHis.XData,-1);
+                tHis(end) = now;
 
-            yHis = circshift(pHis.Ydata,-1);
-            yHis(end) = tLockB.Data(3);
+                yHis = circshift(pHis.YData,-1);
+                yHis(end) = tLockB.Data(3);
+            else               
+                tHis = [pHis.XData now];
+                yHis = [pHis.YData tLockB.Data(3)];
+            end            
             
             set(pHis,'XData',tHis,'YData',yHis);
-            
+             set(ax2,'XLim',[min(tHis) max(tHis)]);
+             datetick('x','MM:SS');
+
+
                 if npt.doLock && npt.LockMode == 4
                    v0 = npt.Delta; % Delta setpoint
                    v1 = Tdelta;    % Delta measure                 

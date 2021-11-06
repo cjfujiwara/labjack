@@ -40,13 +40,17 @@ npt.numAddresses = length(npt.ScanListNames);
 npt.OUT = 'DAC0';
 npt.outName = 'DAC0';
 
-% Default acquisition speed
+% Default Acquisition Parameters
 npt.scanRate = 20e3;
 npt.numScans = 5000;
 npt.delay = 0.2;
 
-% Time Limits (ms)
+% Default lock set point
+npt.Delta = -5.85;
+
+% Default Lock Parameters
 npt.tLim = [100 240];
+npt.hysteresis = 0.2;
 npt.dv = 1;
 
 % Default lock mode
@@ -100,12 +104,13 @@ hpAcq.Position = [1 hF.Position(4)-195 200 120];
 
 hpLock = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
     'title','lock');
-hpLock.Position = [1 hF.Position(4)-395 200 300];
+hpLock.Position = [1 hF.Position(4)-495 200 300];
 
 hpAx = uipanel('parent',hF,'units','pixels','backgroundcolor','w');
 hpAx.Position = [hpCon.Position(3) 1 hF.Position(3)-hpCon.Position(3) hF.Position(4)];
 
-
+tStatus = uicontrol('parent',hpAx,'style','text','string','blah','backgroundcolor','w');
+tStatus.Position =[1 1 150 20];
 %% Resize Callback
     function figResize(fig,~)
        if fig.Position(3) > 400 && fig.Position(4) > 400
@@ -129,14 +134,6 @@ hold on
 
 % Data plot
 pData = plot(1,1,'k-');
-yyaxis right
-
-% Ramp Plot
-sData = plot(1,1,'-');                  
-% Low Time limit Plot
-pLim1 = plot(npt.tLim(1)*[1 1],[0 10],'g--','linewidth',2);
-% High Time limit plot
-pLim2 = plot(npt.tLim(2)*[1 1],[0 10],'g--','linewidth',2);
 
 % Peak A plot
 pPeakA = plot(1,1,'rx','Visible','off');
@@ -163,11 +160,17 @@ pDelta = plot(1,1,'k-','Visible','off');
 tDelta = text(1,1,'a','units','data','verticalalignment','bottom',...
     'horizontalalignment','center','fontsize',8,'color','k',...
     'Visible','off');
+yyaxis right
 
-% Output Voltage
-tOutput= text(.01,.01,'OUTPUT','units','normalized','verticalalignment','bottom',...
-    'horizontalalignment','left','fontsize',16,'color','k',...
-    'Visible','on');
+ylabel('ramp voltage (V)');
+
+% Ramp Plot
+sData = plot(1,1,'-');                  
+% Low Time limit Plot
+pLim1 = plot(npt.tLim(1)*[1 1],[0 10],'g--','linewidth',2);
+% High Time limit plot
+pLim2 = plot(npt.tLim(2)*[1 1],[0 10],'g--','linewidth',2);
+
 
 %
 ax = subplot(3,1,3,'Parent',hpAx);
@@ -307,27 +310,20 @@ hb_stopLock=uicontrol(hpLock,'style','pushbutton','string','stop lock','Fontsize
     'ToolTipString',ttStr,'enable','off','backgroundcolor',[255,165,0]/255);
 hb_stopLock.Position = hb_startLock.Position + [77 0 0 0];
 
-% Output voltage
-tOut = uitable('parent',hpLock,'RowName',{'V0 (V)'},'ColumnName',{},...
-    'fontsize',10,'data',[3.123],...
-    'ColumnWidth',{50},'ColumnEditable',true);
-tOut.Position(3:4)  =  tOut.Extent(3:4);
-tOut.Position(1:2)  = [2 hb_stopLock.Position(2) - 30];
-
 % Down 10 mV
 ttstr='-10 mV';
 hb_v_down_10=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10094) char(10094)],'fontsize',8,...
     'callback',{@chOut, -10},'ToolTipString',ttstr);
-hb_v_down_10.Position(3:4)=[15 tOut.Extent(4)+1];
-hb_v_down_10.Position(1:2) = [tOut.Position(1)+tOut.Position(3)+1 tOut.Position(2)];
+hb_v_down_10.Position(3:4)=[15 25];
+hb_v_down_10.Position(1:2) = [2 hb_startLock.Position(2)-30];
 
 % Down 1 mV
 ttstr='-1 mV';
 hb_v_down_1=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10094)],'fontsize',8,...
     'callback',{@chOut, -1},'ToolTipString',ttstr);
-hb_v_down_1.Position(3:4)=[15 tOut.Extent(4)+1];
+hb_v_down_1.Position(3:4)=[15 25];
 hb_v_down_1.Position(1:2) = hb_v_down_10.Position(1:2) + [15 0];
 
 % Up 1 mV
@@ -335,7 +331,7 @@ ttstr='+1 mV';
 hb_v_up_1=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10095)],'fontsize',8,...
     'callback',{@chOut, -1},'ToolTipString',ttstr);
-hb_v_up_1.Position(3:4)=[15 tOut.Extent(4)+1];
+hb_v_up_1.Position(3:4)=[15 25];
 hb_v_up_1.Position(1:2) = hb_v_down_1.Position(1:2) + [15 0];
 
 % Up 10 mV
@@ -343,21 +339,28 @@ ttstr='+10 mV';
 hb_v_up_10=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10095) char(10095)],'fontsize',8,...
     'callback',{@chOut, -1},'ToolTipString',ttstr);
-hb_v_up_10.Position(3:4)=[15 tOut.Extent(4)+1];
+hb_v_up_10.Position(3:4)=[15 25];
 hb_v_up_10.Position(1:2) = hb_v_up_1.Position(1:2) + [15 0];
 
-% Time Set
-tdT = uitable('parent',hpLock,'RowName',{'dT set ('},'ColumnName',{},...
+% Output voltage
+tOut = uitable('parent',hpLock,'RowName',{'V0 (V)'},'ColumnName',{},...
     'fontsize',10,'data',[3.123],...
-    'ColumnWidth',{50},'ColumnEditable',true);
+    'ColumnWidth',{49},'ColumnEditable',true);
+tOut.Position(3:4)  =  tOut.Extent(3:4);
+tOut.Position(1:2)  = [hb_v_up_10.Position(1)+15+2 hb_stopLock.Position(2) - 30];
+
+% Time Set
+tdT = uitable('parent',hpLock,'RowName',{'dT set (ms)'},'ColumnName',{},...
+    'fontsize',10,'data',[npt.Delta],...
+    'ColumnWidth',{67},'ColumnEditable',true);
 tdT.Position(3:4)  =  tdT.Extent(3:4);
 tdT.Position(1:2)  = [2 tOut.Position(2) - 30];
 
-% Lock Paramters
-n = {'dT set (ms)','dT (ms)','FSR (ms)','df (MHz)'};
+% Measured Parameters
+n = {'dT meas (ms)','FSR (ms)','df (GHz)'};
 tLockB = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
-    'fontsize',10,'data',[10; 10; 10; 10],...
-    'ColumnWidth',{65},'ColumnEditable',false);
+    'fontsize',10,'data',[10; 10; 10],...
+    'ColumnWidth',{55},'ColumnEditable',false);
 tLockB.Position(3:4)  =  tLockB.Extent(3:4);
 tLockB.Position(1:2)  = [2 tdT.Position(2) - tLockB.Extent(4)-10];
 
@@ -372,28 +375,20 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
 
     function startLock(~,~)
         disp([datestr(now,13) ' Engaging lock.']);
+        
         npt.doLock = 1;
         hb_startLock.Enable='off';
-        hb_stopLock.Enable='on';  
-        
-        if npt.LockMode ==2        
-            npt.FSR = range(pFSRA.XData);
-            npt.Delta = range(pDelta.XData);
-        end
-        
+        hb_stopLock.Enable='on';         
+        tLockA.Enable = 'off';        
+
         if npt.LockMode ==4
            npt.FSR = range(pFSRA.XData);
-           npt.Delta = pFSRB.XData(1)-pFSRA.XData(1);
         end
         
         % Setup and call eReadName to read a value.
         [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
         
-        npt.OUT_VALUE_INIT = value;
-        
-        disp([' FSR   : ' num2str(npt.FSR)]);
-        disp([' Delta : ' num2str(npt.Delta)]);
-        disp([' Analog Output : ' num2str(npt.OUT_VALUE_INIT)]);        
+        npt.OUT_VALUE_INIT = value;           
     end
 
     function stopLock(~,~)
@@ -401,9 +396,7 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
         npt.doLock = 0;
         hb_startLock.Enable='on';
         hb_stopLock.Enable='off';  
-        
-        npt.FSR = 0;
-        npt.Delta = 0;
+        tLockA.Enable = 'on';
     end
 
     function chOut(~,~,v)
@@ -419,190 +412,101 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
     'ExecutionMode','FixedSpacing','TimerFcn',@grabData);
 
     function grabData(~,~)
-%         disp('grabbing data');
-%         npt=configureStream(npt);
         configureDeviceForTriggeredStream(npt);
         configureLJMForTriggeredStream;
         pause(0.01);
+        
+        tic;
+        tStatus.String = ['acquiring data ...' ];
         [yNew,isGood] = performStream;
         
         if isGood
             tNew = 1e3*(0:(size(yNew,2)-1))/npt.scanRate;
-
-%             disp([datestr(now,13) ' New data.']);        
             updateData(tNew,yNew);
+            t2=toc;
+            tStatus.String = ['data acquired! (' num2str(round(t2,3)) ' s)'];
         else
+            tStatus.String = 'ERROR';
            warning('error on data capture'); 
         end
     end
 
 %% Data Stuff
     function updateData(t,y)        
-        % Update data
+        % Update plots
         set(pData,'XData',t,'YData',y(1,:));
         set(sData,'XData',t,'YData',y(2,:));
-        set(pLim1,'Ydata',[-5 50]);
-        set(pLim2,'Ydata',[-5 50]);
-    
-
+        set(pLim1,'Ydata',[0 max(y(2,:))]);
+        set(pLim2,'Ydata',[0 max(y(2,:))]);  
         xlim([min(t) max(t)]);
         ylim([0 1.2]);
 
-        % Find Peaks
-        
+        % Restrict Peak search to time limits        
         i1 = t > npt.tLim(1);
         i2 = t < npt.tLim(2);
         i = i1 & i2;
         
+        % Find Peaks
         [yPeak,Tp]=findpeaks(y(1,i),t(i),'MinPeakHeight',0.5,'MinPeakProminence',.4);        
         
-        % Check current output voltage
+        % Read Current output voltage
         [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
+        
+        % Update internal recording of voltage
         npt.OUT_VALUE = value;        
-        tOutput.String = ['$V_\mathrm{0} = ' num2str(value) '$ V'];
-        tOutput.Interpreter='latex';
+        tOut.Data = value;   
         
-        if npt.LockMode == 2
-            if length(yPeak)==2
-                % All peaks are peak A
-                TpA = Tp;
-                yA = yPeak;        
+        % Update if you find four peaks
+        if length(yPeak) == 4            
+            % Sort in descending order of height
+            [yPeak,inds]=sort(yPeak,'descend');
+            Tp=Tp(inds);                
 
-                % Sort them by time
-                [TpA,i]=sort(TpA);yA=yA(i);
+            % Two tallest peaks are peak A
+            TpA = Tp(1:2);yA = yPeak(1:2);
 
-                % Get the FSR
-                FSR_A = range(TpA);
+            % Next two tallest peaks are peak B
+            TpB = Tp(3:4);yB = yPeak(3:4);
 
-                % Find peak separatin
-                Tdelta = TpA(1);
+            % Sort them by time
+            [TpA,ia]=sort(TpA);yA=yA(ia);[TpB,ib]=sort(TpB);yB=yB(ib);
 
-                % Update separation between peaks
-                set(pDelta,'XData',[0 TpA(1)],...
-                    'YData',[1 1]*yA(1),...
-                    'Visible','on');
-                set(tDelta,'String',[num2str(round(Tdelta,3)) ' ms'],...
-                    'Visible','on');   
-                tDelta.Position(1:2) = [mean(pDelta.XData) mean(pDelta.YData)];
+            % Get the FSR
+            FSR_A = range(TpA);FSR_B = range(TpB);
 
-                % Update peak identification data
-                set(pPeakA,'XData',TpA,'YData',yA,'Visible','on'); 
-                set(pPeakB,'Visible','off');            
+            % Find peak separatin
+            Tdelta = TpB(1)-TpA(1);            
 
-                % Update FSR
-                set(pFSRA,'XData',TpA,'YData',min(yA)*[1 1],'Visible','on')
-                set(tFSRA,'String',[num2str(round(FSR_A,3)) ' ms'],...
-                        'Visible','on');
-                tFSRA.Position(1:2) = [mean(pFSRA.XData) mean(pFSRA.YData)];
+            % Update separation between peaks
+            set(pDelta,'XData',[TpA(1) TpB(1)],'YData',[1 1]*mean([yA(1) yB(1)]),'Visible','on');
+            set(tDelta,'String',[num2str(round(Tdelta,3)) ' ms'],'Visible','on');  
+            tDelta.Position(1:2) = [mean(pDelta.XData) mean(pDelta.YData)];
 
-                % Update FSR
-                set(tFSRB,'Visible','off');
+            % Update peak identification markers
+            set(pPeakA,'XData',TpA,'YData',yA,'Visible','on');
+            set(pPeakB,'XData',TpB,'YData',yB,'Visible','on');
 
-                if npt.doLock
+            % Update FSR A Plot and Text
+            set(pFSRA,'XData',TpA,'YData',min(yA)*[1 1],'Visible','on')  
+            set(tFSRA,'String',[num2str(round(FSR_A,3)) ' ms'],'Visible','on');
+            tFSRA.Position(1:2) = [mean(pFSRA.XData) mean(pFSRA.YData)];
+
+            % Update FSR B Plot and Text
+            set(pFSRB,'XData',TpB,'YData',min(yB)*[1 1],'Visible','on')
+            set(tFSRB,'String',[num2str(round(FSR_B,3)) ' ms'],'Visible','on');
+            tFSRB.Position(1:2) = [mean(pFSRB.XData) mean(pFSRB.YData)];            
+            
+            % Update Data Tables
+            tLockB.Data(1) = Tdelta;
+            tLockB.Data(2) = FSR_A;
+            tLockB.Data(3) = (Tdelta/FSR_A)*1.5;
+            
+                if npt.doLock && npt.LockMode == 4
                    v0 = npt.Delta; % Delta setpoint
                    v1 = Tdelta;    % Delta measure                 
 
                    % Only engage lock if FSR is correct
                    if abs(npt.FSR-FSR_A)/npt.FSR < 0.05
-                      disp([v1 v0 FSR_A]);                
-
-                       % Log Current Status
-                       try
-                            day_start=floor(now);
-                            M = [(now-day_start)*24*60*60 npt.FSR v1 FSR_A v0 npt.OUT_VALUE];
-                            fname='Y:\LabJack\CavityLock\Logs\2021\2021.10\11_05.csv';
-                            dlmwrite(fname,M,'-append','delimiter',',');
-                       catch ME
-                           disp(fname)
-                       end
-
-                       % Increment by .5 mV if different (smallest step?)
-                       newVal = value;
-                       if v1>(v0+0.2)
-                          newVal = value - 1e-3; 
-                       end
-                       
-                       if v1<(v0-0.2)
-                            newVal = value + 1e-3;
-                       end
-
-
-                        % Write the new value within capture range
-                        if newVal~=value & abs(newVal-npt.OUT_VALUE_INIT)<.2
-                            LabJack.LJM.eWriteName(npt.handle, npt.OUT, newVal);
-                        end
-                   end    
-                end
-            else
-                pPeakA.Visible='off';
-                pPeakB.Visible='off';
-                pDelta.Visible='off';
-                tDelta.Visible='off';
-                pFSRA.Visible='off';
-                tFSRA.Visible='off';
-            end
-        end     
-        
-        if npt.LockMode ==4
-            if length(yPeak)==4               
-
-                % sort in descending order of height
-                [yPeak,inds]=sort(yPeak,'descend');
-                Tp=Tp(inds);                
-                
-                % Two tallet peaks are peak A
-                TpA = Tp(1:2);
-                yA = yPeak(1:2);
-                
-                % Next two tallest peaks are peak B
-                TpB = Tp(3:4);
-                yB = yPeak(3:4);
-
-                % Sort them by time
-                [TpA,ia]=sort(TpA);yA=yA(ia);
-                [TpB,ib]=sort(TpB);yB=yB(ib);
-
-                % Get the FSR
-                FSR_A = range(TpA);
-                FSR_B = range(TpB);
-
-                % Find peak separatin
-                Tdelta = TpB(1)-TpA(1);            
-
-                % Update separation between peaks
-                set(pDelta,'XData',[TpA(1) TpB(1)],...
-                    'YData',[1 1]*mean([yA(1) yB(1)]),...
-                    'Visible','on');
-                set(tDelta,'String',[num2str(round(abs(Tdelta),3)) ' ms'],...
-                    'Visible','on');   
-                tDelta.Position(1:2) = [mean(pDelta.XData) mean(pDelta.YData)];
-
-                % Update peak identification data
-                set(pPeakA,'XData',TpA,'YData',yA,'Visible','on');
-                set(pPeakB,'XData',TpB,'YData',yB,'Visible','on');
-
-                % Update FSR A
-                set(pFSRA,'XData',TpA,'YData',min(yA)*[1 1],'Visible','on')
-
-                set(tFSRA,'String',[num2str(round(FSR_A,3)) ' ms'],...
-                        'Visible','on');
-                tFSRA.Position(1:2) = [mean(pFSRA.XData) mean(pFSRA.YData)];
-
-                % Update FSR B
-                set(pFSRB,'XData',TpB,'YData',min(yB)*[1 1],'Visible','on')
-
-                set(tFSRB,'String',[num2str(round(FSR_B,3)) ' ms'],...
-                        'Visible','on');
-                tFSRB.Position(1:2) = [mean(pFSRB.XData) mean(pFSRB.YData)];
-
-                if npt.doLock
-                   v0 = npt.Delta; % Delta setpoint
-                   v1 = Tdelta;    % Delta measure                 
-
-                   % Only engage lock if FSR is correct
-                   if abs(npt.FSR-FSR_A)/npt.FSR < 0.05
-                      disp([v1 v0 FSR_A]);                
-
                        % Log Current Status
                        try
                             day_start=floor(now);
@@ -617,16 +521,16 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                        doWrite = 0;     % Don't write a new voltage by default
                        
                        % Is the value sufficiently above the set point?
-                       if v1>(v0+0.2)
+                       if v1>(v0+abs(npt.hysteresis))
                           % Increment by 1mV and enable writing
-                          newVal = value - 1e-3; 
+                          newVal = value - npt.dv*1e-3; 
                           doWrite = 1;
                        end
                        
                       % Is the value sufficiently below the set point?
-                       if v1<(v0-0.2)
+                       if v1<(v0-abs(npt.hysteresis))
                            % Increment by 1mV and enable writing
-                            newVal = value + 1e-3;
+                            newVal = value + npt.dv*1e-3;
                             doWrite = 1;
                        end
                        
@@ -642,18 +546,23 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                            end                           
                        end
                    end    
-                end  
-            else
-                pPeakA.Visible='off';
-                pPeakB.Visible='off';
-                pDelta.Visible='off';
-                tDelta.Visible='off';
-                pFSRA.Visible='off';
-                tFSRA.Visible='off';
-                pFSRB.Visible='off';
-                tFSRB.Visible='off';
-            end
-        end
+                end
+        else
+            pPeakA.Visible='off';
+            pPeakB.Visible='off';
+            pDelta.Visible='off';
+            tDelta.Visible='off';
+            pFSRA.Visible='off';
+            tFSRA.Visible='off';
+            pFSRB.Visible='off';
+            tFSRB.Visible='off';
+            
+            % Update Data Tables
+            tLockB.Data(1) = nan;
+            tLockB.Data(2) = nan;
+            tLockB.Data(3) = nan;
+        end        
+       
         
         drawnow;
     end
@@ -677,7 +586,7 @@ function [Y_ALL,isGood] = performStream
     noScanNum = 0;
     noScanMax = 5;
     
-    fprintf([datestr(now,13 ) ' Streaming ...']);
+%     fprintf([datestr(now,13 ) ' Streaming ...']);
     
     % Begin the Stream
     [~, npt.scanRate] = LabJack.LJM.eStreamStart(npt.handle, npt.scansPerRead, ...

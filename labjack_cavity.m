@@ -514,7 +514,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                        try
                             day_start=floor(now);
                             M = [(now-day_start)*24*60*60 npt.FSR v1 FSR_A v0 npt.OUT_VALUE];
-                            fname='Y:\LabJack\CavityLock\Logs\2021\2021.10\11_05.csv';
+                            fname='Y:\LabJack\CavityLock\Logs\2021\2021.10\11_06.csv';
                             dlmwrite(fname,M,'-append','delimiter',',');
                        catch ME
                            warning('unable to log data');

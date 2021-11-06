@@ -679,7 +679,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             
             set(pHis,'XData',tHis,'YData',yHis);
              set(ax2,'XLim',[min(tHis) max(tHis)]);
-             datetick('x','MM:SS');
+             datetick('x','HH:MM');
 
 
                 if npt.doLock && npt.LockMode == 4

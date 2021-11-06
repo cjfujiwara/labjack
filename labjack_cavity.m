@@ -322,6 +322,8 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
         hb_v_up_1.Enable        = 'on';
         hb_v_up_10.Enable       = 'on';
         tLockB.Enable           = 'on';
+        
+        
 
         npt.doLock              = 0;
         drawnow;   
@@ -344,7 +346,6 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
         hb_startLock.Enable     = 'off';
         hb_stopLock.Enable      = 'off';
         tAcq.Enable             = 'on';
-
         
         tOut.Enable             = 'off';
         hb_v_down_10.Enable     = 'off';
@@ -352,6 +353,8 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
         hb_v_up_1.Enable        = 'off';
         hb_v_up_10.Enable       = 'off';
         tLockB.Enable           = 'off';
+        
+
         
         npt.doLock              = 0;        
         drawnow;                
@@ -527,7 +530,27 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
     end
 
     function chOut(~,~,v)
-       disp(v); 
+        % Read Current output voltage
+        [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
+        
+        % Update internal recording of voltage
+        npt.OUT_VALUE = value;        
+        tOut.Data = value; 
+        
+        newVal = value + v*1e-3;
+        
+        if newVal > 0 && newVal < 5
+            tStatus.String = ['Writing ' num2str(newVal) ' ... '];
+            LabJack.LJM.eWriteName(npt.handle,npt.OUT, newVal);
+            tStatus.String = ['Writing ' num2str(newVal) ' ... done'];
+        end
+        
+        % Read Current output voltage
+        [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
+        
+        % Update internal recording of voltage
+        npt.OUT_VALUE = value;        
+        tOut.Data = value;    
     end
 
 

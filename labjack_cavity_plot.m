@@ -34,6 +34,12 @@ rawTbl=loadLogs(t1,t2);
 te=toc;
 disp(['Loading log files in ' num2str(round(te,3)) ' s']);
 
+if isempty(rawTbl) || height(rawTbl)<5
+   hF = [];
+   data = [];
+   return;
+end
+
 rawTbl.('df (GHz)') = (rawTbl.('dt meas (ms)')./rawTbl.('fsr meas (ms)'))*1.5;
 if opts.dt>0
     % Resample the data using average to make plotting easier over long times

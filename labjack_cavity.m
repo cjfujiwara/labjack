@@ -47,6 +47,7 @@ npt.delay = 0.1;        % Delay time between acquisitions [s]
 
 % Default lock set point 
 npt.Delta = -5.85;      % [ms]
+npt.dfSet = -.140;      % [GHz]
 
 % Default Lock Parameters
 npt.tLim = [100 240];   % [ms]
@@ -430,19 +431,19 @@ tOut.Position(3:4)  =  tOut.Extent(3:4);
 tOut.Position(1:2)  = [hb_v_up_10.Position(1)+15+2 hb_stopLock.Position(2) - 30];
 
 % Time Set
-tdT = uitable('parent',hpLock,'RowName',{'dT set (ms)'},'ColumnName',{},...
-    'fontsize',10,'data',[npt.Delta],...
-    'ColumnWidth',{67},'ColumnEditable',true,'columnformat',{'numeric'});
-tdT.Position(3:4)  =  tdT.Extent(3:4);
-tdT.Position(1:2)  = [2 tOut.Position(2) - 30];
+tdF = uitable('parent',hpLock,'RowName',{'df set (GHz)'},'ColumnName',{},...
+    'fontsize',10,'data',[npt.dfSet],...
+    'ColumnWidth',{55},'ColumnEditable',true,'columnformat',{'numeric'});
+tdF.Position(3:4)  =  tdF.Extent(3:4);
+tdF.Position(1:2)  = [2 tOut.Position(2) - 30];
 
 % Measured Parameters
-n = {'dT meas (ms)','FSR (ms)','df (GHz)'};
+n = {'df npt (GHz)','dT npt (ms)','FSR npt (ms)'};
 tLockB = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
     'fontsize',10,'data',[10; 10; 10],...
     'ColumnWidth',{55},'ColumnEditable',false,'enable','off');
 tLockB.Position(3:4)  =  tLockB.Extent(3:4);
-tLockB.Position(1:2)  = [2 tdT.Position(2) - tLockB.Extent(4)-10];
+tLockB.Position(1:2)  = [2 tdF.Position(2) - tLockB.Extent(4)-10];
 
 % Lock Settings
 n = {'T start (ms)', 'T stop (ms)','hyst. (ms)','step (mV)'};
@@ -512,7 +513,7 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
         hb_startLock.Enable     =' off';
         hb_stopLock.Enable      = 'on';         
         tLockA.Enable           = 'off';        
-        tdT.Enable              = 'off';
+        tdF.Enable              = 'off';
         
         tOut.Enable             = 'off';
         hb_v_down_10.Enable     = 'off';
@@ -536,7 +537,7 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
         hb_startLock.Enable     = 'on';
         hb_stopLock.Enable      = 'off';  
         tLockA.Enable           = 'on';
-        tdT.Enable              = 'on';
+        tdF.Enable              = 'on';
         
         tOut.Enable             = 'on';
         hb_v_down_10.Enable     = 'on';
@@ -665,9 +666,9 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             tFSRB.Position(1:2) = [mean(pFSRB.XData) mean(pFSRB.YData)];            
             
             % Update Data Tables
-            tLockB.Data(1) = Tdelta;
-            tLockB.Data(2) = FSR_A;
-            tLockB.Data(3) = (Tdelta/FSR_A)*1.5;
+            tLockB.Data(1) = (Tdelta/FSR_B)*1.5;
+            tLockB.Data(2) = FSR_B;
+            tLockB.Data(3) = Tdelta;
             
             if length(pHis.XData) == Nhis
                 tHis = circshift(pHis.XData,-1);
@@ -684,65 +685,82 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                 yVOut = [pVOut.YData npt.OUT_VALUE];
             end            
             
-             set(pHis,'XData',tHis,'YData',yHis);
-                set(pVOut,'XData',tHis,'YData',yVOut);
+            set(pHis,'XData',tHis,'YData',yHis);
+            set(pVOut,'XData',tHis,'YData',yVOut);
 
-             set(ax2,'XLim',[min(tHis) max(tHis)]);
-             datetick('x','HH:MM');
+            set(ax2,'XLim',[min(tHis) max(tHis)]);
+            datetick('x','HH:MM');
 
+            if npt.doLock && npt.LockMode == 4
+                df_meas = (Tdelta/FSR_B)*1.5;   % Measured detuning
+                df_set  = npt.dfSet;            % Setpoint detuning
 
-                if npt.doLock && npt.LockMode == 4
-                   v0 = npt.Delta; % Delta setpoint
-                   v1 = Tdelta;    % Delta measure                 
+               % Only engage lock if FSR is close to original
+               if abs(npt.FSR-FSR_B)/npt.FSR < 0.05
+                   % Log Current Status
+                try                          
+                    [fname,isFile] = getLogFile(logRoot);    
 
-                   % Only engage lock if FSR is correct
-                   if abs(npt.FSR-FSR_A)/npt.FSR < 0.05
-                       % Log Current Status
-                       try                          
-                            [fname,isFile] = getLogFile(logRoot);    
-                   
-                            T = timetable(datetime(datevec(now)),round(FSR_A,2),round(Tdelta,2),round(npt.Delta,2),round(npt.OUT_VALUE,4));
-                            T.Properties.VariableNames = {'fsr meas (ms)','dt meas (ms)','dt set (ms)', ' vout (V)'};
-                            if ~isFile
-                                writetimetable(T,fname,'Delimiter',',');
-                            else
-                                writetimetable(T,fname,'Delimiter',',','WriteVariableNames',false,...
-                                    'WriteMode','append');
-                            end                            
-                       catch ME
-                           warning('unable to log data');
-                       end                        
-                       
-                       newVal = value;  % New voltage is the old one
-                       doWrite = 0;     % Don't write a new voltage by default
-                       
-                       % Is the value sufficiently above the set point?
-                       if v1>(v0+abs(npt.hysteresis))
-                          % Increment by 1mV and enable writing
-                          newVal = value - npt.dv*1e-3; 
-                          doWrite = 1;
-                       end
-                       
-                      % Is the value sufficiently below the set point?
-                       if v1<(v0-abs(npt.hysteresis))
-                           % Increment by 1mV and enable writing
-                            newVal = value + npt.dv*1e-3;
-                            doWrite = 1;
-                       end
-                       
-                       % Write the new voltage if necessary
-                       if doWrite
-                           % Check if new voltage is within capture range
-                           if abs(newVal - npt.OUT_VALUE_INIT)<0.2
-                               LabJack.LJM.eWriteName(npt.handle, ...
-                                   npt.OUT, newVal);
-                               tStatus.String = ['Writing ' num2str(newVal)];
-                           else
-                               warning('Unable to write value outside of voltage limits');
-                           end                           
-                       end
-                   end    
-                end
+                        T = timetable(...
+                            datetime(datevec(now)),...
+                            round(FSR_B,2),...
+                            round(Tdelta,2),...
+                            round(npt.OUT_VALUE,4));
+                        T.Properties.VariableNames = ...
+                            {'fsr meas (ms)','dt meas (ms)',' vout (V)'};
+                        if ~isFile
+                            writetimetable(T,fname,'Delimiter',',');
+                        else
+                            writetimetable(T,fname,'Delimiter',',','WriteVariableNames',false,...
+                                'WriteMode','append');
+                        end                            
+                   catch ME
+                       warning('unable to log data');
+                   end                        
+
+                   newVal = value;  % New voltage is the old one
+                   doWrite = 0;     % Don't write a new voltage by default
+
+%                    % Is the value sufficiently above the set point?
+%                    if v1>(v0+abs(npt.hysteresis))
+%                       % Increment by 1mV and enable writing
+%                       newVal = value - npt.dv*1e-3; 
+%                       doWrite = 1;
+%                    end
+% 
+%                   % Is the value sufficiently below the set point?
+%                    if v1<(v0-abs(npt.hysteresis))
+%                        % Increment by 1mV and enable writing
+%                         newVal = value + npt.dv*1e-3;
+%                         doWrite = 1;
+%                    end
+                   % Is the value sufficiently above the set point?
+                   if df_meas>(df_set+abs(npt.hysteresis))
+                      % Increment by 1mV and enable writing
+                      newVal = value - npt.dv*1e-3; 
+                      doWrite = 1;
+                   end
+
+                  % Is the value sufficiently below the set point?
+                   if df_meas<(df_set-abs(npt.hysteresis))
+                       % Increment by 1mV and enable writing
+                        newVal = value + npt.dv*1e-3;
+                        doWrite = 1;
+                   end
+
+                   % Write the new voltage if necessary
+                   if doWrite
+                       % Check if new voltage is within capture range
+                       if abs(newVal - npt.OUT_VALUE_INIT)<0.2
+                           LabJack.LJM.eWriteName(npt.handle, ...
+                               npt.OUT, newVal);
+                           tStatus.String = ['Writing ' num2str(newVal)];
+                       else
+                           warning('Unable to write value outside of voltage limits');
+                       end                           
+                   end
+               end    
+            end
         else
             pPeakA.Visible='off';
             pPeakB.Visible='off';

@@ -694,7 +694,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                        try
                             day_start=floor(now);
                             M = [(now-day_start)*24*60*60 npt.FSR v1 FSR_A v0 npt.OUT_VALUE];                            
-                            fname = getLogFile(logRoot);                            
+                            fname = getLogFile(logRoot);    
                             dlmwrite(fname,M,'-append','delimiter',',');
                        catch ME
                            warning('unable to log data');
@@ -969,19 +969,18 @@ dirYear  = [logRoot filesep num2str(mydatevec(1))];
 dirMonth = [dirYear filesep num2str(mydatevec(1)) '.' sprintf('%2.2d',mydatevec(2))];
 fileDay  = [dirMonth filesep sprintf('%2.2d',mydatevec(2)) '_' sprintf('%2.2d',mydatevec(3)) '.csv'];
 
-if ~exist(dirSource)
+if ~exist(logRoot,'dir')
    warning('No data server found.');
-   dirDay = 0;
+   fileDay = [];
    return;  
 end
 
-if exist(dirYear)~=7
+if ~exist(dirYear,'dir')
    mkdir(dirYear); 
 end
 
-if exist(dirMonth)~=7
+if ~exist(dirMonth,'dir')
     mkdir(dirMonth);
 end
-
 
 end

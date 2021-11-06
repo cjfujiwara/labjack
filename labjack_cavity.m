@@ -257,9 +257,46 @@ hb_stopAcq.Position = hb_startAcq.Position + [52 0 0 0];
 n = {'Rate (Hz)', 'Num Scans','Delay (s)'};
 tAcq = uitable('parent',hpAcq,'RowName',n,'ColumnName',{},...
     'fontsize',10,'data',[npt.scanRate; npt.numScans; npt.delay],...
-    'ColumnWidth',{50},'ColumnEditable',true);
+    'ColumnWidth',{50},'ColumnEditable',true,'CellEditCallback',@tacqcb);
 tAcq.Position(3:4)  =  tAcq.Extent(3:4);
 tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
+
+    function tacqcb(a,b)
+        i = b.Indices(1,1);
+        switch i
+            case 1
+                fOld = b.PreviousData;
+                fNew = b.NewData;                
+                if isnumeric(fNew) && fNew > 10 && fNew < 50001
+                   a.Data(i)    = round(fNew);
+                   npt.scanRate = round(fNew);
+                else
+                    a.Data(i)       = fOld;
+                    warning('invalid scan rate');                    
+                end
+            case 2
+                NOld = b.PreviousData;
+                NNew = b.NewData;                
+                if isnumeric(NNew) && NNew > 10 && NNew < 20001
+                   a.Data(i)    = round(NNew);
+                   npt.numScans = round(NNew);
+                else
+                    a.Data(i)       = NOld;
+                    warning('invalid number of scans');                    
+                end
+            case 3
+                TOld = b.PreviousData;
+                TNew = b.NewData;                
+                if isnumeric(TNew) && TNew > 0 && TNew < 11
+                   a.Data(i)    = TNew;
+                   npt.delay    = TNew;
+                   timer_labjack.Period = npt.delay;
+                else
+                    a.Data(i)       = TOld;
+                    warning('invalid delay time');                    
+                end    
+        end
+    end
 
 % Force acquisition callback
     function force(~,~)
@@ -292,6 +329,7 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
         configureDeviceForTriggeredStream(npt);
         configureLJMForTriggeredStream;
         drawnow;
+        timer_labjack.Period = npt.delay;
         start(timer_labjack);    
     end
 
@@ -396,7 +434,6 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
 
     function chLockA(a,b)
         i = b.Indices(1,1);
-        
         switch i
             case 1
                 t1New   = b.NewData;

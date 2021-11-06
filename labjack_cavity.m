@@ -696,7 +696,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                    
                             T = timetable(datetime(datevec(now)),round(FSR_A,2),round(Tdelta,2),round(npt.Delta,2),round(npt.OUT_VALUE,4));
                             T.Properties.VariableNames = {'fsr meas (ms)','dt meas (ms)','dt set (ms)', ' vout (V)'};
-                            if isFile
+                            if ~isFile
                                 writetimetable(T,fname,'Delimiter',',');
                             else
                                 writetimetable(T,fname,'Delimiter',',','WriteVariableNames',false,...

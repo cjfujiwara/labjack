@@ -99,6 +99,8 @@ if opts.doPlot
 
 
     set(ax,'XLim',[datetime(datevec(t1)) datetime(datevec(t2))]);
+else 
+    hF = [];
 end
 %% Helper functions
     function T_all = loadLogs(t1,t2)

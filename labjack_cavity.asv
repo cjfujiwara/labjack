@@ -29,7 +29,7 @@ npt = struct;
 npt.myip='192.168.1.124';
 
 % Digital trigger channel
-npt.TRIGGER_NAME='DIO0'; % aka DIO0, must be DIO0 or DIO1 for triggered stream
+npt.TRIGGER_NAME='DIO0'; % Which channel to use for trigger
 
 % Analog input channels
 npt.names = ['cavity','scan'];
@@ -37,21 +37,21 @@ npt.ScanListNames = {'AIN0','AIN1'} ;
 npt.numAddresses = length(npt.ScanListNames);
 
 % Analog output channels
-npt.OUT = 'DAC0';
+npt.OUT = 'DAC0';       % Output channel
 npt.outName = 'DAC0';
 
 % Default Acquisition Parameters
-npt.scanRate = 20e3;
-npt.numScans = 5000;
-npt.delay = 0.2;
+npt.scanRate = 20e3;    % Data sampling rate [Hz]
+npt.numScans = 5000;    % Number of scans to take 
+npt.delay = 0.1;        % Delay time between acquisitions [s]
 
-% Default lock set point
-npt.Delta = -5.85;
+% Default lock set point 
+npt.Delta = -5.85;      % [ms]
 
 % Default Lock Parameters
-npt.tLim = [100 240];
-npt.hysteresis = 0.2;
-npt.dv = 1;
+npt.tLim = [100 240];   % [ms]
+npt.hysteresis = 0.2;   % [ms] hystersis to allows lock point to wander
+npt.dv = 1;             % [mV] step size of lock
 
 % Default lock mode
 npt.LockMode=4;
@@ -75,15 +75,14 @@ clf
 
 set(hF,'Color','w','units','pixels','Name',guiname,...
     'toolbar','figure','Tag','GUI','CloseRequestFcn',@closeGUI,...
-    'NumberTitle','off','Position',[50 50 600 500],...
+    'NumberTitle','off','Position',[50 50 800 500],...
     'SizeChangedFcn',@figResize);
 
 
 % Callback for when the GUI is requested to be closed.
     function closeGUI(fig,~)
         disp('Closing labjack cavity GUI...');
-        try  
-            
+        try              
             if npt.handle
                npt = disconnect(npt);
             end
@@ -94,40 +93,40 @@ set(hF,'Color','w','units','pixels','Name',guiname,...
         delete(fig);                % Delete the figure
     end
 
+% Connect panel
 hpCon = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
-    'title','connect');
-hpCon.Position = [1 hF.Position(4)-75 200 75];
+    'title','connect','position',[1 hF.Position(4)-75 200 75]);
 
+% Acquisition panel
 hpAcq = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
-    'title','acquisition');
-hpAcq.Position = [1 hF.Position(4)-195 200 120];
+    'title','acquisition','position',[1 hF.Position(4)-195 200 120]);
 
+% Lock Panel
 hpLock = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
-    'title','lock');
-hpLock.Position = [1 hF.Position(4)-495 200 300];
+    'title','lock','position',[1 hF.Position(4)-495 200 300]);
 
+% Main plot panel
 hpAx = uipanel('parent',hF,'units','pixels','backgroundcolor','w');
 hpAx.Position = [hpCon.Position(3) 1 hF.Position(3)-hpCon.Position(3) hF.Position(4)];
 
-tStatus = uicontrol('parent',hpAx,'style','text','string','blah','backgroundcolor','w');
+% Status string
+tStatus = uicontrol('parent',hpAx,'style','text','string','blah',...
+    'backgroundcolor','w','horizontalalignment','left');
 tStatus.Position =[1 1 150 20];
 %% Resize Callback
     function figResize(fig,~)
-       if fig.Position(3) > 400 && fig.Position(4) > 400
-        
+       if fig.Position(3) > 400 && fig.Position(4) > 400        
            hpCon.Position(2) = hF.Position(4) - hpCon.Position(4);
            hpAcq.Position(2) = hpCon.Position(2) - hpAcq.Position(4);
-           hpLock.Position(2) = hpAcq.Position(2) - hpLock.Position(4);
-           
+           hpLock.Position(2) = hpAcq.Position(2) - hpLock.Position(4);           
            hpAx.Position(3:4) = [hF.Position(3)-hpCon.Position(3) hF.Position(4)];       
        end
     end
 
 %% Main plots
 
-% ax = axes('parent',hpAx);
-ax = subplot(3,1,[1 2],'Parent',hpAx);
-set(ax,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
+ax1 = subplot(3,1,[1 2],'Parent',hpAx);
+set(ax1,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
 xlabel('time (ms)');
 ylabel('voltage (V)');
 hold on
@@ -172,9 +171,9 @@ pLim1 = plot(npt.tLim(1)*[1 1],[0 10],'g--','linewidth',2);
 pLim2 = plot(npt.tLim(2)*[1 1],[0 10],'g--','linewidth',2);
 
 
-%
-ax = subplot(3,1,3,'Parent',hpAx);
-set(ax,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
+% History plot
+ax2 = subplot(3,1,3,'Parent',hpAx);
+set(ax2,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
 xlabel('time ago (s)');
 xlim([0 60]);
 hold on
@@ -206,50 +205,55 @@ tIP.Position(1:2) = [2 hb_connect.Position(2) - 30];
         disp('Connecting to labjack');
         npt=connect(npt);
         
-        hb_connect.Enable='off';
-        hb_disconnect.Enable='on';
-        
-        hb_startAcq.Enable='on';
-        hb_stopAcq.Enable='off';
-        hb_force.Enable='on';
+        hb_connect.Enable       = 'off';
+        hb_disconnect.Enable    = 'on';        
+        hb_startAcq.Enable      = 'on';
+        hb_stopAcq.Enable       = 'off';
+        hb_force.Enable         = 'on';
     end
 
     function doDisconnect(~,~)
         disp('Disconnecting from labjack');
         npt=disconnect(npt);
         
-        hb_connect.Enable='on';
-        hb_disconnect.Enable='off';
+        hb_connect.Enable       = 'on';
+        hb_disconnect.Enable    = 'off';        
+        hb_startAcq.Enable      = 'off';
+        hb_stopAcq.Enable       = 'off';
+        hb_force.Enable         = 'off';
         
-        hb_startAcq.Enable='off';
-        hb_stopAcq.Enable='off';
-        hb_force.Enable='off';
+        tOut.Enable             = 'off';
+        hb_v_down_10.Enable     = 'off';
+        hb_v_down_1.Enable      = 'off';
+        hb_v_up_1.Enable        = 'off';
+        hb_v_up_10.Enable       = 'off';
+        tLockB.Enable           = 'off';
     end
 
 %% Acquisition
 
-% start
+% force acquisition button
 ttStr = 'Force Acq';
 hb_force=uicontrol(hpAcq,'style','pushbutton','string','force','Fontsize',10,...
     'Backgroundcolor',[255,255,255]/255,'Callback',@force,...
     'ToolTipString',ttStr,'enable','off');
 hb_force.Position = [2 hpAcq.Position(4)-40 50 20];
 
-% start
+% start acquisition button
 ttStr = 'Start Acq';
 hb_startAcq=uicontrol(hpAcq,'style','pushbutton','string','start','Fontsize',10,...
     'Backgroundcolor','w','Callback',@startAcq,...
     'ToolTipString',ttStr,'enable','off','backgroundcolor',[85 205 252]/255);
 hb_startAcq.Position = hb_force.Position + [52 0 0 0];
 
-% Stop
+% stp[ acquisition button
 ttStr = 'Stop acquisition';
 hb_stopAcq=uicontrol(hpAcq,'style','pushbutton','string','stop','Fontsize',10,...
     'Backgroundcolor','w','Position',[244 1 40 20],'Callback',@stopAcq,...
     'ToolTipString',ttStr,'enable','off','backgroundcolor',[247, 168, 184]/255);
 hb_stopAcq.Position = hb_startAcq.Position + [52 0 0 0];
 
-% Acquisition Settings
+% acquisition settings panel
 n = {'Rate (Hz)', 'Num Scans','Delay (s)'};
 tAcq = uitable('parent',hpAcq,'RowName',n,'ColumnName',{},...
     'fontsize',10,'data',[npt.scanRate; npt.numScans; npt.delay],...
@@ -257,53 +261,71 @@ tAcq = uitable('parent',hpAcq,'RowName',n,'ColumnName',{},...
 tAcq.Position(3:4)  =  tAcq.Extent(3:4);
 tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
 
+% Force acquisition callback
     function force(~,~)
         disp([datestr(now,13) ' Forcing acquisition.']);
         npt=configureStream(npt);
         grabData
     end
 
+% start acquisition callback
     function startAcq(~,~)
         disp([datestr(now,13) ' Starting acquisition.']);
-        npt.doAcq = 1;
-        hb_startAcq.Enable='off';
-        hb_stopAcq.Enable='on';
-        hb_startLock.Enable='on';
-        hb_stopLock.Enable='off';
-        hb_force.Enable='off';
-        npt.doLock = 0;        
+        npt.doAcq               = 1;
+        hb_force.Enable         = 'off';
+        hb_startAcq.Enable      = 'off';
+        hb_stopAcq.Enable       = 'on';
+        hb_startLock.Enable     = 'on';
+        hb_stopLock.Enable      = 'off';
+        
+        tOut.Enable             = 'on';
+        hb_v_down_10.Enable     = 'on';
+        hb_v_down_1.Enable      = 'on';
+        hb_v_up_1.Enable        = 'on';
+        hb_v_up_10.Enable       = 'on';
+        tLockB.Enable           = 'on';
+
+        npt.doLock              = 0;
+        drawnow;   
         
         npt=configureStream(npt);
         configureDeviceForTriggeredStream(npt);
         configureLJMForTriggeredStream;
         drawnow;
-
         start(timer_labjack);    
     end
 
+% stop acquisition callback
     function stopAcq(~,~)
         disp([datestr(now,13) ' Stopping acquisition.']);
-        npt.doAcq = 0;
-        hb_startAcq.Enable='on';
-        hb_stopAcq.Enable='off';
-        hb_startLock.Enable='off';
-        hb_stopLock.Enable='off';
-        npt.doLock = 0;
-        hb_force.Enable='on';
-
+        npt.doAcq               = 0;
+        hb_force.Enable         = 'on';
+        hb_startAcq.Enable      = 'on';
+        hb_stopAcq.Enable       = 'off';
+        hb_startLock.Enable     = 'off';
+        hb_stopLock.Enable      = 'off';
+        
+        tOut.Enable             = 'off';
+        hb_v_down_10.Enable     = 'off';
+        hb_v_down_1.Enable      = 'off';
+        hb_v_up_1.Enable        = 'off';
+        hb_v_up_10.Enable       = 'off';
+        tLockB.Enable           = 'off';
+        
+        npt.doLock              = 0;        
         drawnow;                
         stop(timer_labjack);    
     end
 %% Lock Graphics and Callbacks
 
-% start
+% start lock button
 ttStr = 'Start lock';
 hb_startLock=uicontrol(hpLock,'style','pushbutton','string','start lock','Fontsize',10,...
     'Backgroundcolor','w','Callback',@startLock,...
     'ToolTipString',ttStr,'enable','off','backgroundcolor',[137 207 240]/255);
 hb_startLock.Position = [2 hpLock.Position(4)-40 75 20];
 
-% Stop
+% stop lock button
 ttStr = 'Stop lock';
 hb_stopLock=uicontrol(hpLock,'style','pushbutton','string','stop lock','Fontsize',10,...
     'Backgroundcolor','w','Position',[366 1 80 20],'Callback',@stopLock,...
@@ -314,7 +336,7 @@ hb_stopLock.Position = hb_startLock.Position + [77 0 0 0];
 ttstr='-10 mV';
 hb_v_down_10=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10094) char(10094)],'fontsize',8,...
-    'callback',{@chOut, -10},'ToolTipString',ttstr);
+    'callback',{@chOut, -10},'ToolTipString',ttstr,'enable','off');
 hb_v_down_10.Position(3:4)=[15 25];
 hb_v_down_10.Position(1:2) = [2 hb_startLock.Position(2)-30];
 
@@ -322,7 +344,7 @@ hb_v_down_10.Position(1:2) = [2 hb_startLock.Position(2)-30];
 ttstr='-1 mV';
 hb_v_down_1=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10094)],'fontsize',8,...
-    'callback',{@chOut, -1},'ToolTipString',ttstr);
+    'callback',{@chOut, -1},'ToolTipString',ttstr,'enable','off');
 hb_v_down_1.Position(3:4)=[15 25];
 hb_v_down_1.Position(1:2) = hb_v_down_10.Position(1:2) + [15 0];
 
@@ -330,7 +352,7 @@ hb_v_down_1.Position(1:2) = hb_v_down_10.Position(1:2) + [15 0];
 ttstr='+1 mV';
 hb_v_up_1=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10095)],'fontsize',8,...
-    'callback',{@chOut, -1},'ToolTipString',ttstr);
+    'callback',{@chOut, -1},'ToolTipString',ttstr,'enable','off');
 hb_v_up_1.Position(3:4)=[15 25];
 hb_v_up_1.Position(1:2) = hb_v_down_1.Position(1:2) + [15 0];
 
@@ -338,14 +360,14 @@ hb_v_up_1.Position(1:2) = hb_v_down_1.Position(1:2) + [15 0];
 ttstr='+10 mV';
 hb_v_up_10=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10095) char(10095)],'fontsize',8,...
-    'callback',{@chOut, -1},'ToolTipString',ttstr);
+    'callback',{@chOut, -1},'ToolTipString',ttstr,'enable','off');
 hb_v_up_10.Position(3:4)=[15 25];
 hb_v_up_10.Position(1:2) = hb_v_up_1.Position(1:2) + [15 0];
 
 % Output voltage
 tOut = uitable('parent',hpLock,'RowName',{'V0 (V)'},'ColumnName',{},...
     'fontsize',10,'data',[3.123],...
-    'ColumnWidth',{49},'ColumnEditable',true);
+    'ColumnWidth',{49},'ColumnEditable',true,'enable','off');
 tOut.Position(3:4)  =  tOut.Extent(3:4);
 tOut.Position(1:2)  = [hb_v_up_10.Position(1)+15+2 hb_stopLock.Position(2) - 30];
 
@@ -360,7 +382,7 @@ tdT.Position(1:2)  = [2 tOut.Position(2) - 30];
 n = {'dT meas (ms)','FSR (ms)','df (GHz)'};
 tLockB = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
     'fontsize',10,'data',[10; 10; 10],...
-    'ColumnWidth',{55},'ColumnEditable',false);
+    'ColumnWidth',{55},'ColumnEditable',false,'enable','off');
 tLockB.Position(3:4)  =  tLockB.Extent(3:4);
 tLockB.Position(1:2)  = [2 tdT.Position(2) - tLockB.Extent(4)-10];
 
@@ -368,35 +390,70 @@ tLockB.Position(1:2)  = [2 tdT.Position(2) - tLockB.Extent(4)-10];
 n = {'T start (ms)', 'T stop (ms)','hyst. (ms)','step (mV)'};
 tLockA = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
     'fontsize',10,'data',[npt.tLim(1); npt.tLim(2); npt.delay; npt.dv],...
-    'ColumnWidth',{55},'ColumnEditable',true);
+    'ColumnWidth',{55},'ColumnEditable',true,'CellEditCallback',@chLockA);
 tLockA.Position(3:4)  =  tLockA.Extent(3:4);
 tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
+
+    function chLockA(a,b)
+        i = b.Indices(1,1);
+        
+        switch i
+            case 1
+                t1Old   = b.NewData;
+                t1New   = a.Data(1);
+                t2      = a.Data(2);
+                if isnumeric(t1New) && t1New > 0 && t1New < 1000 && t1New <t2
+                   a.Data(1) = t1New; 
+                   npt.tLim(1) = t1New;
+                else
+                   a.Data(1) = t1Old; 
+                   drawnow;
+    warning('invalid time limit');
+                end
+                
+        end
+      
+    end
 
 
     function startLock(~,~)
         disp([datestr(now,13) ' Engaging lock.']);
         
         npt.doLock = 1;
-        hb_startLock.Enable='off';
-        hb_stopLock.Enable='on';         
-        tLockA.Enable = 'off';        
+        hb_startLock.Enable     =' off';
+        hb_stopLock.Enable      = 'on';         
+        tLockA.Enable           = 'off';        
+        tdT.Enable              = 'off';
+        
+        tOut.Enable             = 'off';
+        hb_v_down_10.Enable     = 'off';
+        hb_v_down_1.Enable      = 'off';
+        hb_v_up_1.Enable        = 'off';
+        hb_v_up_10.Enable       = 'off';
 
         if npt.LockMode ==4
            npt.FSR = range(pFSRA.XData);
         end
         
         % Setup and call eReadName to read a value.
-        [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
-        
+        [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);        
         npt.OUT_VALUE_INIT = value;           
     end
 
     function stopLock(~,~)
         disp([datestr(now,13) ' Stopping lock.']);
         npt.doLock = 0;
-        hb_startLock.Enable='on';
-        hb_stopLock.Enable='off';  
-        tLockA.Enable = 'on';
+        
+        hb_startLock.Enable     = 'on';
+        hb_stopLock.Enable      = 'off';  
+        tLockA.Enable           = 'on';
+        tdT.Enable              = 'on';
+        
+        tOut.Enable             = 'on';
+        hb_v_down_10.Enable     = 'on';
+        hb_v_down_1.Enable      = 'on';
+        hb_v_up_1.Enable        = 'on';
+        hb_v_up_10.Enable       = 'on';
     end
 
     function chOut(~,~,v)
@@ -511,7 +568,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                        try
                             day_start=floor(now);
                             M = [(now-day_start)*24*60*60 npt.FSR v1 FSR_A v0 npt.OUT_VALUE];
-                            fname='Y:\LabJack\CavityLock\Logs\2021\2021.10\11_05.csv';
+                            fname='Y:\LabJack\CavityLock\Logs\2021\2021.10\11_06.csv';
                             dlmwrite(fname,M,'-append','delimiter',',');
                        catch ME
                            warning('unable to log data');
@@ -540,7 +597,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                            if abs(newVal - npt.OUT_VALUE_INIT)<0.2
                                LabJack.LJM.eWriteName(npt.handle, ...
                                    npt.OUT, newVal);
-                               disp('writing');
+                               tStatus.String = ['Writing ' num2str(newVal)];
                            else
                                warning('Unable to write value outside of voltage limits');
                            end                           
@@ -642,7 +699,7 @@ function [Y_ALL,isGood] = performStream
     end  
     tend=now;
     
-    disp([' done (' num2str(round((tend-tstart)*24*60*60,2)) 's)']);
+%     disp([' done (' num2str(round((tend-tstart)*24*60*60,2)) 's)']);
 end
 
 

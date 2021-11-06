@@ -390,9 +390,41 @@ tLockB.Position(1:2)  = [2 tdT.Position(2) - tLockB.Extent(4)-10];
 n = {'T start (ms)', 'T stop (ms)','hyst. (ms)','step (mV)'};
 tLockA = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
     'fontsize',10,'data',[npt.tLim(1); npt.tLim(2); npt.delay; npt.dv],...
-    'ColumnWidth',{55},'ColumnEditable',true);
+    'ColumnWidth',{55},'ColumnEditable',true,'CellEditCallback',@chLockA);
 tLockA.Position(3:4)  =  tLockA.Extent(3:4);
 tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
+
+    function chLockA(a,b)
+        i = b.Indices(1,1);
+        
+        switch i
+            case 1
+                t1New   = b.NewData;
+                t1Old   = b.PreviousData;
+                t2      = a.Data(2);
+                if isnumeric(t1New) && t1New > 0 && t1New < 1000 && t1New < t2
+                    a.Data(1) = t1New; 
+                    npt.tLim(1) = t1New;
+                else
+                    a.Data(1) = t1Old; 
+                    drawnow;
+                    warning('invalid time limit');
+                end
+            case 2
+                t2New   = b.NewData;
+                t2Old   = b.PreviousData;
+                t1      = a.Data(1);
+                if isnumeric(t2New) && t2New > 0 && t2New < 1000 && t2New > t1
+                    a.Data(2) = t2New; 
+                    npt.tLim(2) = t2New;
+                else
+                    a.Data(2) = t2Old; 
+                    drawnow;
+                    warning('invalid time limit');
+                end
+        end
+      
+    end
 
 
     function startLock(~,~)

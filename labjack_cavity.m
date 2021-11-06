@@ -448,6 +448,7 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
                 if isnumeric(t1New) && t1New > 0 && t1New < 1000 && t1New < t2
                     a.Data(1)   = t1New; 
                     npt.tLim(1) = t1New;
+                    pLim1.XData = [1 1]*t1New;
                 else
                     a.Data(1) = t1Old; 
                     warning('invalid time limit');
@@ -459,6 +460,7 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
                 if isnumeric(t2New) && t2New > 0 && t2New < 1000 && t2New > t1
                     a.Data(2)   = t2New; 
                     npt.tLim(2) = t2New;
+                    pLim2.XData = [1 1]*t2New;
                 else
                     a.Data(2) = t2Old; 
                     warning('invalid time limit');
@@ -931,11 +933,6 @@ function npt = configureStream(npt)
     disp([' done (' num2str(round((t2-t1)*60*60*24,3)) 's)']);
 
 end
-
-
-%% Initialize Figure
-
-%% Define Callbacks
 
 
 end

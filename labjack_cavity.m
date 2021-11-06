@@ -61,6 +61,8 @@ npt.doAcq = 0;
 
 % Maximum time to remember old lock point [s]
 Nhis = 600;
+logRoot = 'Y:\LabJack\CavityLock\Logs';
+
 %% Load LJM
 try
     % Make the LJM .NET assembly visible in MATLAB
@@ -691,8 +693,8 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                        % Log Current Status
                        try
                             day_start=floor(now);
-                            M = [(now-day_start)*24*60*60 npt.FSR v1 FSR_A v0 npt.OUT_VALUE];
-                            fname='Y:\LabJack\CavityLock\Logs\2021\2021.10\11_06.csv';
+                            M = [(now-day_start)*24*60*60 npt.FSR v1 FSR_A v0 npt.OUT_VALUE];                            
+                            fname = getLogFile(logRoot);                            
                             dlmwrite(fname,M,'-append','delimiter',',');
                        catch ME
                            warning('unable to log data');
@@ -954,6 +956,31 @@ function npt = configureStream(npt)
     t2 = now;
     disp([' done (' num2str(round((t2-t1)*60*60*24,3)) 's)']);
 
+end
+
+
+end
+
+function fileDay = getLogFile(logRoot)
+
+mydatevec = datevec(now);
+
+dirYear  = [logRoot filesep num2str(mydatevec(1))];
+dirMonth = [dirYear filesep num2str(mydatevec(1)) '.' sprintf('%2.2d',mydatevec(2))];
+fileDay  = [dirMonth filesep sprintf('%2.2d',mydatevec(2)) '_' sprintf('%2.2d',mydatevec(3)) '.csv'];
+
+if ~exist(dirSource)
+   warning('No data server found.');
+   dirDay = 0;
+   return;  
+end
+
+if exist(dirYear)~=7
+   mkdir(dirYear); 
+end
+
+if exist(dirMonth)~=7
+    mkdir(dirMonth);
 end
 
 

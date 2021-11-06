@@ -167,19 +167,15 @@ pDelta = plot(1,1,'k-','Visible','off');
 tDelta = text(1,1,'a','units','data','verticalalignment','bottom',...
     'horizontalalignment','center','fontsize',8,'color','k',...
     'Visible','off');
+
 yyaxis right
-
 ylabel('ramp voltage (V)');
-
 % Ramp Plot
 sData = plot(1,1,'-');                  
 % Low Time limit Plot
 pLim1 = plot(npt.tLim(1)*[1 1],[0 10],'g--','linewidth',2);
 % High Time limit plot
 pLim2 = plot(npt.tLim(2)*[1 1],[0 10],'g--','linewidth',2);
-
-
-yyaxis left
 
 % History plot
 ax2 = subplot(3,1,3,'Parent',hpAx);
@@ -188,7 +184,11 @@ pHis = plot(now,nan,'k-');
 datetick('x',13);
 set(ax2,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
 xlabel('time');
-ylabel('detuning (GHz');
+ylabel('detuning (GHz)');
+
+yyaxis right
+pVOut = plot(now,nan,'r-');
+ylabel('output (V)');
 
 %% Connection and Acquisition
 
@@ -336,7 +336,8 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
         tLockB.Enable           = 'on';
         
         set(pHis,'XData',now','YData',nan);
-        
+        set(pVOut,'XData',now','YData',nan);
+
 
         npt.doLock              = 0;
         drawnow;   
@@ -674,12 +675,18 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
 
                 yHis = circshift(pHis.YData,-1);
                 yHis(end) = tLockB.Data(3);
+                
+                yVOut = circshift(pVOut.YData,-1);
+                yVOut(end) = npt.OUT_VALUE;
             else               
                 tHis = [pHis.XData now];
                 yHis = [pHis.YData tLockB.Data(3)];
+                yVOut = [pVOut.YData npt.OUT_VALUE];
             end            
             
-            set(pHis,'XData',tHis,'YData',yHis);
+             set(pHis,'XData',tHis,'YData',yHis);
+                set(pVOut,'XData',tHis,'YData',yVOut);
+
              set(ax2,'XLim',[min(tHis) max(tHis)]);
              datetick('x','HH:MM');
 

@@ -314,6 +314,7 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
         hb_stopAcq.Enable       = 'on';
         hb_startLock.Enable     = 'on';
         hb_stopLock.Enable      = 'off';
+        tAcq.Enable             = 'off';
         
         tOut.Enable             = 'on';
         hb_v_down_10.Enable     = 'on';
@@ -342,6 +343,8 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
         hb_stopAcq.Enable       = 'off';
         hb_startLock.Enable     = 'off';
         hb_stopLock.Enable      = 'off';
+        tAcq.Enable             = 'on';
+
         
         tOut.Enable             = 'off';
         hb_v_down_10.Enable     = 'off';

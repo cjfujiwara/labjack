@@ -58,13 +58,19 @@ npt.LockMode=4;
 
 % Acquisition is default off
 npt.doAcq = 0;
-%% Load LJM
-% Make the LJM .NET assembly visible in MATLAB
-ljmAsm = NET.addAssembly('LabJack.LJM');
 
-% Creating an object to nested class LabJack.LJM.CONSTANTS
-t = ljmAsm.AssemblyHandle.GetType('LabJack.LJM+CONSTANTS');
-LJM_CONSTANTS = System.Activator.CreateInstance(t);
+% Maximum time to remember old lock point [s]
+Nhis = 600;
+%% Load LJM
+try
+    % Make the LJM .NET assembly visible in MATLAB
+    ljmAsm = NET.addAssembly('LabJack.LJM');
+    % Creating an object to nested class LabJack.LJM.CONSTANTS
+    t = ljmAsm.AssemblyHandle.GetType('LabJack.LJM+CONSTANTS');
+    LJM_CONSTANTS = System.Activator.CreateInstance(t);
+catch ME2
+    warning('Unable to load LJM NET assembly.  Have you installed all the packages given by Labjack?');
+end
 npt.handle = 0;
 
 %% Figure and Panels
@@ -174,9 +180,12 @@ pLim2 = plot(npt.tLim(2)*[1 1],[0 10],'g--','linewidth',2);
 % History plot
 ax2 = subplot(3,1,3,'Parent',hpAx);
 set(ax2,'box','on','linewidth',1,'xgrid','on','ygrid','on','fontsize',8);
-xlabel('time ago (s)');
+xlabel('time');
 xlim([0 60]);
 hold on
+datetick x
+
+pHis = plot(nan(Nhis,1)*now,nan(Nhis,1));
 
 %% Connection and Acquisition
 
@@ -592,6 +601,8 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
         set(pLim2,'Ydata',[0 max(y(2,:))]);  
         xlim([min(t) max(t)]);
         ylim([0 1.2]);
+        
+
 
         % Restrict Peak search to time limits        
         i1 = t > npt.tLim(1);
@@ -652,6 +663,14 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             tLockB.Data(1) = Tdelta;
             tLockB.Data(2) = FSR_A;
             tLockB.Data(3) = (Tdelta/FSR_A)*1.5;
+            
+            tHis = circshift(pHis.Xdata,-1);
+            tHis(end) = now;
+
+            yHis = circshift(pHis.Ydata,-1);
+            yHis(end) = tLockB.Data(3);
+            
+            set(pHis,'XData',tHis,'YData',yHis);
             
                 if npt.doLock && npt.LockMode == 4
                    v0 = npt.Delta; % Delta setpoint
@@ -802,19 +821,14 @@ function npt = connect(npt)
     try
         % Ethernet Connect
         fprintf('Connecting to labjack ... ');
-        [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'ETHERNET', npt.myip, npt.handle);
-        
+        [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'ETHERNET', npt.myip, npt.handle);        
 % USB
-%         [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'USB', 'ANY', npt.handle);
-
-        
+%         [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'USB', 'ANY', npt.handle);        
         disp( ' done');
-
         try
             [ljmError] = LabJack.LJM.eStreamStop(npt.handle);
         end
-        showDeviceInfo(npt.handle);    
-       
+        showDeviceInfo(npt.handle);  
     end
 end
 
@@ -828,8 +842,7 @@ end
         LabJack.LJM.WriteLibraryConfigS(LJM_CONSTANTS.STREAM_SCANS_RETURN,...
             LJM_CONSTANTS.STREAM_SCANS_RETURN_ALL_OR_NONE);
 %         LabJack.LJM.WriteLibraryConfigS(LJM_CONSTANTS.STREAM_SCANS_RETURN,...
-%             1);
-        
+%             1);        
 %         LabJack.LJM.WriteLibraryConfigS(LJM_CONSTANTS.STREAM_RECEIVE_TIMEOUT_MS,...
 %             0);  
         LabJack.LJM.WriteLibraryConfigS(LJM_CONSTANTS.STREAM_RECEIVE_TIMEOUT_MS,...
@@ -866,13 +879,12 @@ function configureDeviceForTriggeredStream(npt)
 %     LabJack.LJM.eWriteName(npt.handle, [npt.TRIGGER_NAME '_EF_CONFIG_A'], 1);
 
 
-% This works?
+    % This is the best one? 2021/11/05
     LabJack.LJM.eWriteName(npt.handle, [npt.TRIGGER_NAME '_EF_INDEX'], 4);    
     LabJack.LJM.eWriteName(npt.handle, [npt.TRIGGER_NAME '_EF_CONFIG_A'], 1);
     
     % Enable
     LabJack.LJM.eWriteName(npt.handle, [npt.TRIGGER_NAME '_EF_ENABLE'], 1);
-
 end
 
 

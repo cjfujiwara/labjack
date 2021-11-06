@@ -691,11 +691,17 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                    % Only engage lock if FSR is correct
                    if abs(npt.FSR-FSR_A)/npt.FSR < 0.05
                        % Log Current Status
-                       try
-                            day_start=floor(now);
-                            M = [(now-day_start)*24*60*60 npt.FSR v1 FSR_A v0 npt.OUT_VALUE];                            
-                            fname = getLogFile(logRoot);    
-                            dlmwrite(fname,M,'-append','delimiter',',');
+                       try                          
+                            [fname,isFile] = getLogFile(logRoot);    
+                   
+                            T = timetable(datetime(datevec(now)),round(FSR_A,2),round(Tdelta,2),round(npt.Delta,2),round(npt.OUT_VALUE,4));
+                            T.Properties.VariableNames = {'fsr meas (ms)','dt meas (ms)','dt set (ms)', ' vout (V)'};
+                            if isFile
+                                writetimetable(T,fname,'Delimiter',',');
+                            else
+                                writetimetable(T,fname,'Delimiter',',','WriteVariableNames',false,...
+                                    'WriteMode','append');
+                            end                            
                        catch ME
                            warning('unable to log data');
                        end                        
@@ -961,7 +967,7 @@ end
 
 end
 
-function fileDay = getLogFile(logRoot)
+function [fileDay,fileexist] = getLogFile(logRoot)
 
 mydatevec = datevec(now);
 
@@ -982,5 +988,8 @@ end
 if ~exist(dirMonth,'dir')
     mkdir(dirMonth);
 end
+
+fileexist=exist(fileDay,'file');
+
 
 end

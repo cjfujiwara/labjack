@@ -676,7 +676,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                 tHis(end) = now;
 
                 yHis = circshift(pHis.YData,-1);
-                yHis(end) = tLockB.Data(3);
+                yHis(end) = tLockB.Data(1);
                 
                 yVOut = circshift(pVOut.YData,-1);
                 yVOut(end) = npt.OUT_VALUE;

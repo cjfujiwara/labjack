@@ -42,7 +42,7 @@ npt.outName = 'DAC0';
 
 % Default Acquisition Parameters
 npt.scanRate = 20e3;    % Data sampling rate [Hz]
-npt.numScans = 5000;    % Number of scans to take 
+npt.numScans = 5500;    % Number of scans to take 
 npt.delay = 0.1;        % Delay time between acquisitions [s]
 
 % Default lock set point 
@@ -51,7 +51,7 @@ npt.dfSet = -.140;      % [GHz]
 
 % Default Lock Parameters
 npt.tLim = [100 240];   % [ms]
-npt.hysteresis = 0.2;   % [ms] hystersis to allows lock point to wander
+npt.hysteresis = 0.01;  % [GHz] hystersis to allows lock point to wander
 npt.dv = 1;             % [mV] step size of lock
 
 % Default lock mode
@@ -446,7 +446,7 @@ tLockB.Position(3:4)  =  tLockB.Extent(3:4);
 tLockB.Position(1:2)  = [2 tdF.Position(2) - tLockB.Extent(4)-10];
 
 % Lock Settings
-n = {'T start (ms)', 'T stop (ms)','hyst. (ms)','step (mV)'};
+n = {'T start (ms)', 'T stop (ms)','hyst. (GHz)','step (mV)'};
 tLockA = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
     'fontsize',10,'data',[npt.tLim(1); npt.tLim(2); npt.hysteresis; npt.dv],...
     'ColumnWidth',{55},'ColumnEditable',true,'CellEditCallback',@chLockA);
@@ -644,7 +644,12 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             FSR_A = range(TpA);FSR_B = range(TpB);
 
             % Find peak separatin
-            Tdelta = TpB(1)-TpA(1);            
+            Tdelta = TpB(1)-TpA(1);        
+            
+            % Update Data Tables
+            tLockB.Data(1) = (Tdelta/FSR_B)*1.5;
+            tLockB.Data(2) = Tdelta;
+            tLockB.Data(3) = FSR_B;
 
             % Update separation between peaks
             set(pDelta,'XData',[TpA(1) TpB(1)],'YData',[1 1]*mean([yA(1) yB(1)]),'Visible','on');
@@ -663,12 +668,8 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             % Update FSR B Plot and Text
             set(pFSRB,'XData',TpB,'YData',min(yB)*[1 1],'Visible','on')
             set(tFSRB,'String',[num2str(round(FSR_B,3)) ' ms'],'Visible','on');
-            tFSRB.Position(1:2) = [mean(pFSRB.XData) mean(pFSRB.YData)];            
+            tFSRB.Position(1:2) = [mean(pFSRB.XData) mean(pFSRB.YData)];           
             
-            % Update Data Tables
-            tLockB.Data(1) = (Tdelta/FSR_B)*1.5;
-            tLockB.Data(2) = FSR_B;
-            tLockB.Data(3) = Tdelta;
             
             if length(pHis.XData) == Nhis
                 tHis = circshift(pHis.XData,-1);
@@ -681,7 +682,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                 yVOut(end) = npt.OUT_VALUE;
             else               
                 tHis = [pHis.XData now];
-                yHis = [pHis.YData tLockB.Data(3)];
+                yHis = [pHis.YData tLockB.Data(1)];
                 yVOut = [pVOut.YData npt.OUT_VALUE];
             end            
             
@@ -721,20 +722,8 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                    newVal = value;  % New voltage is the old one
                    doWrite = 0;     % Don't write a new voltage by default
 
-%                    % Is the value sufficiently above the set point?
-%                    if v1>(v0+abs(npt.hysteresis))
-%                       % Increment by 1mV and enable writing
-%                       newVal = value - npt.dv*1e-3; 
-%                       doWrite = 1;
-%                    end
-% 
-%                   % Is the value sufficiently below the set point?
-%                    if v1<(v0-abs(npt.hysteresis))
-%                        % Increment by 1mV and enable writing
-%                         newVal = value + npt.dv*1e-3;
-%                         doWrite = 1;
-%                    end
                    % Is the value sufficiently above the set point?
+%                    disp(df_meas-df_set)
                    if df_meas>(df_set+abs(npt.hysteresis))
                       % Increment by 1mV and enable writing
                       newVal = value - npt.dv*1e-3; 

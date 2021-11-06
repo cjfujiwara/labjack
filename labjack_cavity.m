@@ -100,7 +100,7 @@ hpAcq.Position = [1 hF.Position(4)-195 200 120];
 
 hpLock = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
     'title','lock');
-hpLock.Position = [1 hF.Position(4)-335 200 140];
+hpLock.Position = [1 hF.Position(4)-395 200 300];
 
 hpAx = uipanel('parent',hF,'units','pixels','backgroundcolor','w');
 hpAx.Position = [hpCon.Position(3) 1 hF.Position(3)-hpCon.Position(3) hF.Position(4)];
@@ -307,13 +307,68 @@ hb_stopLock=uicontrol(hpLock,'style','pushbutton','string','stop lock','Fontsize
     'ToolTipString',ttStr,'enable','off','backgroundcolor',[255,165,0]/255);
 hb_stopLock.Position = hb_startLock.Position + [77 0 0 0];
 
+% Down 10 mV
+ttstr='-10 mV';
+hb_v_down_10=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
+    'backgroundcolor','w','String',[char(10094) char(10094)],'fontsize',8,...
+    'callback',{@chOut, -10},'ToolTipString',ttstr);
+hb_v_down_10.Position(3:4)=[15 25];
+hb_v_down_10.Position(1:2) = [2 hb_startLock.Position(2)-30];
+
+% Down 1 mV
+ttstr='-1 mV';
+hb_v_down_1=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
+    'backgroundcolor','w','String',[char(10094)],'fontsize',8,...
+    'callback',{@chOut, -1},'ToolTipString',ttstr);
+hb_v_down_1.Position(3:4)=[15 25];
+hb_v_down_1.Position(1:2) = hb_v_down_10.Position(1:2) + [15 0];
+
+% Up 1 mV
+ttstr='+1 mV';
+hb_v_up_1=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
+    'backgroundcolor','w','String',[char(10095)],'fontsize',8,...
+    'callback',{@chOut, -1},'ToolTipString',ttstr);
+hb_v_up_1.Position(3:4)=[15 25];
+hb_v_up_1.Position(1:2) = hb_v_down_1.Position(1:2) + [15 0];
+
+% Up 10 mV
+ttstr='+10 mV';
+hb_v_up_10=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
+    'backgroundcolor','w','String',[char(10095) char(10095)],'fontsize',8,...
+    'callback',{@chOut, -1},'ToolTipString',ttstr);
+hb_v_up_10.Position(3:4)=[15 25];
+hb_v_up_10.Position(1:2) = hb_v_up_1.Position(1:2) + [15 0];
+
+% Output voltage
+tOut = uitable('parent',hpLock,'RowName',{'V0 (V)'},'ColumnName',{},...
+    'fontsize',10,'data',[3.123],...
+    'ColumnWidth',{49},'ColumnEditable',true);
+tOut.Position(3:4)  =  tOut.Extent(3:4);
+tOut.Position(1:2)  = [hb_v_up_10.Position(1)+15+2 hb_stopLock.Position(2) - 30];
+
+% Time Set
+tdT = uitable('parent',hpLock,'RowName',{'dT set (ms)'},'ColumnName',{},...
+    'fontsize',10,'data',[5.5],...
+    'ColumnWidth',{67},'ColumnEditable',true);
+tdT.Position(3:4)  =  tdT.Extent(3:4);
+tdT.Position(1:2)  = [2 tOut.Position(2) - 30];
+
+% Measured Parameters
+n = {'dT meas (ms)','FSR (ms)','df (MHz)'};
+tLockB = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
+    'fontsize',10,'data',[10; 10; 10],...
+    'ColumnWidth',{55},'ColumnEditable',false);
+tLockB.Position(3:4)  =  tLockB.Extent(3:4);
+tLockB.Position(1:2)  = [2 tdT.Position(2) - tLockB.Extent(4)-10];
+
 % Lock Settings
-n = {'T 1 (ms)', 'T 2 (ms)','T h (ms)','dV (mV)'};
-tAcq = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
+n = {'T start (ms)', 'T stop (ms)','hyst. (ms)','step (mV)'};
+tLockA = uitable('parent',hpLock,'RowName',n,'ColumnName',{},...
     'fontsize',10,'data',[npt.tLim(1); npt.tLim(2); npt.delay; npt.dv],...
-    'ColumnWidth',{60},'ColumnEditable',true);
-tAcq.Position(3:4)  =  tAcq.Extent(3:4);
-tAcq.Position(1:2)  = [2 hb_stopLock.Position(2) - 90];
+    'ColumnWidth',{55},'ColumnEditable',true);
+tLockA.Position(3:4)  =  tLockA.Extent(3:4);
+tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
+
 
     function startLock(~,~)
         disp([datestr(now,13) ' Engaging lock.']);
@@ -349,6 +404,10 @@ tAcq.Position(1:2)  = [2 hb_stopLock.Position(2) - 90];
         
         npt.FSR = 0;
         npt.Delta = 0;
+    end
+
+    function chOut(~,~,v)
+       disp(v); 
     end
 
 

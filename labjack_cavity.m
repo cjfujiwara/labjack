@@ -396,7 +396,7 @@ hb_v_down_1.Position(1:2) = hb_v_down_10.Position(1:2) + [15 0];
 ttstr='+1 mV';
 hb_v_up_1=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10095)],'fontsize',8,...
-    'callback',{@chOut, -1},'ToolTipString',ttstr,'enable','off');
+    'callback',{@chOut, 1},'ToolTipString',ttstr,'enable','off');
 hb_v_up_1.Position(3:4)=[15 25];
 hb_v_up_1.Position(1:2) = hb_v_down_1.Position(1:2) + [15 0];
 
@@ -404,7 +404,7 @@ hb_v_up_1.Position(1:2) = hb_v_down_1.Position(1:2) + [15 0];
 ttstr='+10 mV';
 hb_v_up_10=uicontrol(hpLock,'Style','pushbutton','units','pixels',...
     'backgroundcolor','w','String',[char(10095) char(10095)],'fontsize',8,...
-    'callback',{@chOut, -1},'ToolTipString',ttstr,'enable','off');
+    'callback',{@chOut, 10},'ToolTipString',ttstr,'enable','off');
 hb_v_up_10.Position(3:4)=[15 25];
 hb_v_up_10.Position(1:2) = hb_v_up_1.Position(1:2) + [15 0];
 

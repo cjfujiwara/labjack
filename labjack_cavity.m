@@ -606,8 +606,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
         set(pLim1,'Ydata',[0 max(y(2,:))]);
         set(pLim2,'Ydata',[0 max(y(2,:))]);
         set(ax1,'XLim',[min(t) max(t)]);
-        set(ax1,'YLim',[0 1.2]);
-        
+        set(ax1,'YLim',[0 1.2]);      
 
 
         % Restrict Peak search to time limits        
@@ -619,8 +618,13 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
         [yPeak,Tp]=findpeaks(y(1,i),t(i),'MinPeakHeight',0.5,'MinPeakProminence',.4);        
         
         % Read Current output voltage
-        [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
-        
+        try
+            [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
+        catch err
+            warning('error on grab value of output');
+            value = nan;
+        end
+           
         % Update internal recording of voltage
         npt.OUT_VALUE = value;        
         tOut.Data = value;   
@@ -741,8 +745,13 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                    if doWrite
                        % Check if new voltage is within capture range
                        if abs(newVal - npt.OUT_VALUE_INIT)<0.2
-                           LabJack.LJM.eWriteName(npt.handle, ...
-                               npt.OUT, newVal);
+                           try
+                            LabJack.LJM.eWriteName(npt.handle, ...
+                                npt.OUT, newVal);
+                           catch err2
+                               newVal = nan;
+                               warning('error on piezo write');
+                           end
                            tStatus.String = ['Writing ' num2str(newVal)];
                        else
                            warning('Unable to write value outside of voltage limits');

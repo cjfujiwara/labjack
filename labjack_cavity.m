@@ -57,6 +57,9 @@ npt.dv = 1;             % [mV] step size of lock
 % Default lock mode
 npt.LockMode=4;
 
+npt.ManualWrite = 0;
+npt.ManualWriteStep = 0;
+
 % Acquisition is default off
 npt.doAcq = 0;
 
@@ -433,9 +436,19 @@ tOut.Position(1:2)  = [hb_v_up_10.Position(1)+15+2 hb_stopLock.Position(2) - 30]
 % Time Set
 tdF = uitable('parent',hpLock,'RowName',{'df set (GHz)'},'ColumnName',{},...
     'fontsize',10,'data',[npt.dfSet],...
-    'ColumnWidth',{55},'ColumnEditable',true,'columnformat',{'numeric'});
+    'ColumnWidth',{55},'ColumnEditable',true,'columnformat',{'numeric'},...
+    'CellEditCallback',@chLockPoint);
 tdF.Position(3:4)  =  tdF.Extent(3:4);
 tdF.Position(1:2)  = [2 tOut.Position(2) - 30];
+
+    function chLockPoint(a,b)
+        if isnumeric(b.NewData) && (b.NewData>-1.5 || b.NewData<1.5)
+            npt.dfSet = tdF.Data;
+        else
+            a.Data = b.PreviousData;
+        end
+        
+    end
 
 % Measured Parameters
 n = {'df npt (GHz)','dT npt (ms)','FSR npt (ms)'};
@@ -547,27 +560,9 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
     end
 
     function chOut(~,~,v)
-        % Read Current output voltage
-        [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
-        
-        % Update internal recording of voltage
-        npt.OUT_VALUE = value;        
-        tOut.Data = value; 
-        
-        newVal = value + v*1e-3;
-        
-        if newVal > 0 && newVal < 5
-            tStatus.String = ['Writing ' num2str(newVal) ' ... '];
-            LabJack.LJM.eWriteName(npt.handle,npt.OUT, newVal);
-            tStatus.String = ['Writing ' num2str(newVal) ' ... done'];
-        end
-        
-        % Read Current output voltage
-        [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
-        
-        % Update internal recording of voltage
-        npt.OUT_VALUE = value;        
-        tOut.Data = value;    
+        % Read Current output voltage              
+        npt.ManualWrite     = 1;
+        npt.ManualWriteStep = v;
     end
 
 
@@ -579,6 +574,35 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
     'ExecutionMode','FixedSpacing','TimerFcn',@grabData);
 
     function grabData(~,~)
+        
+        if npt.ManualWrite
+            [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
+        
+            % Update internal recording of voltage
+            npt.OUT_VALUE = value;        
+            tOut.Data = value; 
+
+            v = npt.ManualWriteStep;
+            
+            newVal = value + v*1e-3;
+
+            if newVal > 0 && newVal < 5
+                tStatus.String = ['Writing ' num2str(newVal) ' ... '];
+                LabJack.LJM.eWriteName(npt.handle,npt.OUT, newVal);
+                tStatus.String = ['Writing ' num2str(newVal) ' ... done'];
+            end
+
+            % Read Current output voltage
+            [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);
+
+            % Update internal recording of voltage
+            npt.OUT_VALUE = value;        
+            tOut.Data = value;  
+            
+            npt.ManualWrite = 0;
+            npt.ManualWriteStep = 0;
+        end
+        
         configureDeviceForTriggeredStream(npt);
         configureLJMForTriggeredStream;
         pause(0.01);
@@ -594,8 +618,10 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             tStatus.String = ['data acquired! (' num2str(round(t2,3)) ' s)'];
         else
             tStatus.String = 'ERROR';
-           warning('error on data capture'); 
+            warning('error on data capture'); 
         end
+        
+        
     end
 
 %% Data Stuff
@@ -704,21 +730,21 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                if abs(npt.FSR-FSR_B)/npt.FSR < 0.05
                    % Log Current Status
                 try                          
-                    [fname,isFile] = getLogFile(logRoot);    
-
-                        T = timetable(...
-                            datetime(datevec(now)),...
-                            round(FSR_B,2),...
-                            round(Tdelta,2),...
-                            round(npt.OUT_VALUE,4));
-                        T.Properties.VariableNames = ...
-                            {'fsr meas (ms)','dt meas (ms)',' vout (V)'};
-                        if ~isFile
-                            writetimetable(T,fname,'Delimiter',',');
-                        else
-                            writetimetable(T,fname,'Delimiter',',','WriteVariableNames',false,...
-                                'WriteMode','append');
-                        end                            
+%                     [fname,isFile] = getLogFile(logRoot);    
+% 
+%                         T = timetable(...
+%                             datetime(datevec(now)),...
+%                             round(FSR_B,2),...
+%                             round(Tdelta,2),...
+%                             round(npt.OUT_VALUE,4));
+%                         T.Properties.VariableNames = ...
+%                             {'fsr meas (ms)','dt meas (ms)',' vout (V)'};
+%                         if ~isFile
+%                             writetimetable(T,fname,'Delimiter',',');
+%                         else
+%                             writetimetable(T,fname,'Delimiter',',','WriteVariableNames',false,...
+%                                 'WriteMode','append');
+%                         end                            
                    catch ME
                        warning('unable to log data');
                    end                        

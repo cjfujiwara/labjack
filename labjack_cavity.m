@@ -50,6 +50,7 @@ npt.numScans        = 5500;         % Number of scans to take
 npt.scansPerRead    = npt.numScans; % Scan per read
 
 npt.delay           = 0.1;          % Delay time between acquisitions [s]
+npt.timeout         = 1;            % Timeout before stream is aborted [s]
 
 % Default lock set point 
 npt.dfSet           = -.140;        % [GHz]
@@ -131,7 +132,12 @@ hpAx.Position = [hpCon.Position(3) 1 hF.Position(3)-hpCon.Position(3) hF.Positio
 % Status string
 tStatus = uicontrol('parent',hpAx,'style','text','string','blah',...
     'backgroundcolor','w','horizontalalignment','left');
-tStatus.Position =[1 1 150 20];
+tStatus.Position =[1 1 250 20];
+
+% Status string
+tTiming = uicontrol('parent',hpAx,'style','text','string','blah',...
+    'backgroundcolor','w','horizontalalignment','left');
+tTiming.Position =[1 20 200 20];
 
 % Resize Function
     function figResize(fig,~)
@@ -618,19 +624,20 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             npt.ManualWrite = 0;
             npt.ManualWriteStep = 0;
         end
+        
+        tStatus.String = 'configuring ... ';
         configureDeviceForTriggeredStream(npt);
         configureLJMForTriggeredStream;
-        pause(0.02);
+        pause(0.01);
         
         tic;
-        tStatus.String = ['acquiring data ...' ];
+        tStatus.String = [tStatus.String ' streaming ...' ];
         [yNew,isGood] = performStream;
         
         if isGood
             tNew = 1e3*(0:(size(yNew,2)-1))/npt.scanRate;
             updateData(tNew,yNew);
             t2=toc;
-            tStatus.String = ['data acquired! (' num2str(round(t2,3)) ' s)'];
         else
             t2=toc;
             tStatus.String = ['ERROR (' num2str(round(t2,3)) ' s)'];
@@ -641,7 +648,10 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
     end
 
 %% Data Stuff
-    function updateData(t,y)        
+    function updateData(t,y)     
+        tStatus.String = [tStatus.String ' plotting ... '];
+
+        
         % Update plots
         set(pData,'XData',t,'YData',y(1,:));
         set(sData,'XData',t,'YData',y(2,:));
@@ -819,6 +829,8 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
        
         
         drawnow;
+        tStatus.String = [tStatus.String ' done! '];
+
     end
 
 
@@ -826,45 +838,30 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
 
 
 function [Y_ALL,isGood] = performStream
+    tStart = now;
+    
+    % Time for each read
+    sleepTime = double(npt.scansPerRead)/double(npt.scanRate);
 
     % Initializing Bookkeeeping variables
     totScans = 0;
     totSkip = 0;
     i = 0;
     dataAll = {};
-    isGood = 1;
-    LJMScanBacklog=0;
-    
-    tstart=now;
-    
-    noScanNum = 0;
-    noScanMax = 10;
-    
-%     fprintf([datestr(now,13 ) ' Streaming ...']);
-    
-%     disp('Streaming');
-%     disp([' Scan Rate         : ' num2str(npt.scanRate)]);
-%     disp([' Num scans         : ' num2str(npt.numScans)]);
-%     disp([' total duration    : ' num2str(npt.numScans/npt.scanRate)]);
-%     disp([' scan per read     : ' num2str(npt.scansPerRead)]);
-%     disp([' # channels        : ' num2str(length(npt.aScanList))]);
-%     disp([' total sample rate : ' num2str(length(npt.aScanList)*npt.scanRate)]);
-% 
-% 
-    
+    isGood = 1;    
+    Y_ALL=[];
 
-    % Read the trigger level so as to start the stream at a good time
+    % Wait until trigger is low
     tLevel = 0;
+    tic
     while tLevel == 0
 %         [~,tLevel]=LabJack.LJM.eReadName(npt.handle,'USER_RAM0_I32',0);
         [~,tLevel]=LabJack.LJM.eReadName(npt.handle,'DIO0',0);
+        pause(0.01);        
     end
-    pause(0.01);
+    t2=toc;
+%     tStatus.String = [' trigger wait ' num2str(round(1e3*t2,1)) ' ms'];
         
-%         
-    sleepTime = double(npt.scansPerRead)/double(npt.scanRate);
-    
-
     % Begin the Stream
     [ljm_err, npt.scanRate] = LabJack.LJM.eStreamStart(npt.handle, int32(npt.scansPerRead), ...
         int32(npt.numAddresses), npt.aScanList, int32(npt.scanRate));
@@ -872,60 +869,72 @@ function [Y_ALL,isGood] = performStream
         warning('error detected on stream start')
     end
     
-%     pause(1.5*sleepTime);
-    while (totScans<npt.numScans) && isGood   
-        pause(1.5*sleepTime);        
+    tic;
+    pause(sleepTime + 0.01); 
+    while (totScans < npt.numScans) && isGood                     
         try
             % Read data in buffer
             [~, devScanBL, ljmScanBL] = LabJack.LJM.eStreamRead( ...
                 npt.handle, npt.aData, 0, 0);
-%             disp([num2str(i) ' : ' num2str(ljmScanBL) ' ' num2str(devScanBL)]);
             
-%             disp(size(double(npt.aData)))
-
             % Update scans
             totScans = totScans+npt.scansPerRead;
 
             % Update skipped measurements
             curSkip = sum(double(npt.aData)==-9999.0);
             totSkip = totSkip + curSkip;
+            
             % Increment stream read
             i = i+1;        
-
+            
             % Append Data
             dataAll{i}=double(npt.aData);  
-%             figure(300+i)
-%             plot(double(npt.aData));
-        catch ME            
-            if isequal(char(ME.ExceptionObject.LJMError) ,'NO_SCANS_RETURNED')
-%                 disp([datestr(now,13) ' no scans']);  
-                noScanNum = noScanNum + 1;
-                if noScanNum >= noScanMax
-                    warning([' too many empty scans, restarting']);                        
+            
+            % Wait if more data to be had
+            if  totScans < npt.numScans
+                pause(sleepTime)
+            end            
+
+        catch ME   
+            if isequal(char(ME.ExceptionObject.LJMError),...
+                    'NO_SCANS_RETURNED')                
+                t3 = toc;
+                if t3>npt.timeout
+                    warning(' Timeout exceeded.');                        
                     npt=disconnect(npt);
                     npt=connect(npt);
                     npt=configureStream(npt);
+                    try
+                        LabJack.LJM.eStreamStop(npt.handle);
+                    end
                     isGood = 0;
-                end
+                end  
             else
                 isGood=0;
             end
+        end         
+    end
+    
+    if isGood        
+        try
+            LabJack.LJM.eStreamStop(npt.handle);
+        end        
+        t3 = toc;       % Stream Duration
+        tEnd = now;     % Total Time
 
-        end          
+         tTiming.String = [... 
+             '(' num2str(1e3*t2,'%03.f') ' ms, ' ...
+             num2str(1e3*t3,'%03.f') ' ms, ' ...
+             num2str(1e3*(tEnd-tStart)*24*60*60,'%03.f') ' ms)'];
+        drawnow;
+
+        Y_ALL=[];
+        for kk=1:length(dataAll)
+            Y = dataAll{kk};
+            Y = reshape(Y,[npt.numAddresses length(Y)/npt.numAddresses]);
+            Y_ALL = [Y_ALL Y];
+        end    
     end
-    
-    try
-        LabJack.LJM.eStreamStop(npt.handle);
-    end
-    Y_ALL=[];
-    for kk=1:length(dataAll)
-        Y = dataAll{kk};
-        Y = reshape(Y,[npt.numAddresses length(Y)/npt.numAddresses]);
-        Y_ALL = [Y_ALL Y];
-    end    
-    tend=now;
-    
-%     disp([' done (' num2str(round((tend-tstart)*24*60*60,2)) 's)']);
 end
 
 

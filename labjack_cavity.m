@@ -1,12 +1,13 @@
 function labjack_cavity
 %% Load Dependencies
+
 disp(repmat('-',1,60));disp([mfilename '.m']);disp(repmat('-',1,60)); 
 
 % Add all subdirectories for this m file
 curpath = fileparts(mfilename('fullpath'));
 addpath(curpath);addpath(genpath(curpath))  
 
-%% GUI Settings
+%% Load previous instances
 guiname = 'labjack_cavity';
 
 % Find any instances of the GUI and bring it to focus, this is tof avoid
@@ -26,48 +27,52 @@ end
 npt = struct;
 
 % Labckjack default ip address
-npt.myip='192.168.1.124';
+npt.myip            = '192.168.1.124';
+
+% Labjack handle is empty by default
+npt.handle          = 0;
 
 % Digital trigger channel
-npt.TRIGGER_NAME='DIO0'; % Which channel to use for trigger
+npt.TRIGGER_NAME    = 'DIO0'; % Which channel to use for trigger
 
 % Analog input channels
-npt.names = ['cavity','scan'];
-npt.ScanListNames = {'AIN0','AIN1'} ;
-npt.numAddresses = length(npt.ScanListNames);
+npt.names           = ['cavity','scan'];    % Input names
+npt.ScanListNames   = {'AIN0','AIN1'} ;     % Input channels
+npt.numAddresses    = length(npt.ScanListNames);
 
 % Analog output channels
-npt.OUT = 'DAC0';       % Output channel
-npt.outName = 'DAC0';
+npt.OUT             = 'DAC0';       % Output channel
+npt.outName         = 'DAC0';       % Output channel
 
 % Default Acquisition Parameters
-npt.scanRate = 20e3;    % Data sampling rate [Hz]
-npt.numScans = 5500;    % Number of scans to take 
-npt.scansPerRead = npt.numScans; % Scan per read
-% npt.scansPerRead = 200;
+npt.scanRate        = 20e3;         % Data sampling rate [Hz]
+npt.numScans        = 5500;         % Number of scans to take 
+npt.scansPerRead    = npt.numScans; % Scan per read
 
-npt.delay = 0.1;        % Delay time between acquisitions [s]
+npt.delay           = 0.1;          % Delay time between acquisitions [s]
 
 % Default lock set point 
-npt.Delta = -5.85;      % [ms]
-npt.dfSet = -.140;      % [GHz]
+npt.dfSet           = -.140;        % [GHz]
 
 % Default Lock Parameters
-npt.tLim = [100 240];   % [ms]
-npt.hysteresis = 0.01;  % [GHz] hystersis to allows lock point to wander
-npt.dv = 1;             % [mV] step size of lock
+npt.tLim            = [100 240];    % [ms] time limits to find peaks
+npt.hysteresis      = 0.01;         % [GHz] hystersis window
+npt.dv              = 1;            % [mV] step size of lock
 
 % Default lock mode
-npt.LockMode=4;
+npt.LockMode        = 4;
 
-npt.ManualWrite = 0;
+% Manual write mode
+npt.ManualWrite     = 0;
 npt.ManualWriteStep = 0;
 
 % Acquisition is default off
-npt.doAcq = 0;
+npt.doAcq           = 0;
 
 % Maximum time to remember old lock point [s]
 Nhis = 600;
+
+% Log Directory root
 logRoot = 'Y:\LabJack\CavityLock\Logs';
 
 %% Load LJM
@@ -78,16 +83,15 @@ try
     t = ljmAsm.AssemblyHandle.GetType('LabJack.LJM+CONSTANTS');
     LJM_CONSTANTS = System.Activator.CreateInstance(t);
 catch ME2
-    warning('Unable to load LJM NET assembly.  Have you installed all the packages given by Labjack?');
+    warning(['Unable to load LJM NET assembly.  ' ...
+        'Have you installed all the packages given by Labjack?']);
 end
-npt.handle = 0;
 
 %% Figure and Panels
 
 % Initialize the primary figure
 hF=figure;
 clf
-
 set(hF,'Color','w','units','pixels','Name',guiname,...
     'toolbar','figure','Tag','GUI','CloseRequestFcn',@closeGUI,...
     'NumberTitle','off','Position',[50 50 800 500],...
@@ -128,7 +132,8 @@ hpAx.Position = [hpCon.Position(3) 1 hF.Position(3)-hpCon.Position(3) hF.Positio
 tStatus = uicontrol('parent',hpAx,'style','text','string','blah',...
     'backgroundcolor','w','horizontalalignment','left');
 tStatus.Position =[1 1 150 20];
-%% Resize Callback
+
+% Resize Function
     function figResize(fig,~)
        if fig.Position(3) > 400 && fig.Position(4) > 400        
            hpCon.Position(2) = hF.Position(4) - hpCon.Position(4);
@@ -177,6 +182,7 @@ tDelta = text(1,1,'a','units','data','verticalalignment','bottom',...
 
 yyaxis right
 ylabel('ramp voltage (V)');
+
 % Ramp Plot
 sData = plot(1,1,'-');                  
 % Low Time limit Plot
@@ -199,14 +205,14 @@ ylabel('output (V)');
 
 %% Connection and Acquisition
 
-% Connect
+% Connect Button
 ttStr = 'Connect';
 hb_connect=uicontrol(hpCon,'style','pushbutton','string','connect','Fontsize',10,...
     'Backgroundcolor','w','Callback',@doConnect,...
     'ToolTipString',ttStr,'backgroundcolor',[80 200 120]/255,'enable','on');
 hb_connect.Position = [2 hpCon.Position(4)-40 70 20];
 
-% Disconnect
+% Disconnect Button
 ttStr = 'Disconnect';
 hb_disconnect=uicontrol(hpCon,'style','pushbutton','string','disconnect','Fontsize',10,...
     'Backgroundcolor','w','Position',[81 1 80 20],'Callback',@doDisconnect,...

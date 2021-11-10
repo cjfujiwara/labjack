@@ -32,13 +32,13 @@ try
     % [ljmError, handle] = LabJack.LJM.Open(LJM_CONSTANTS.dtANY, ...
     %     LJM_CONSTANTS.ctANY, 'ANY', handle);
     
-    myip='192.168.1.193';
+    myip='192.168.1.124';
     [ljmError, handle] = LabJack.LJM.OpenS('T7', 'ETHERNET', myip, handle);
 
     showDeviceInfo(handle);
 
     % The number of eStreamRead calls to perform in the stream read loop
-    maxRequests = 50;
+    maxRequests = 10;
 
     % Stream Configuration
     numAddresses = 2;
@@ -53,8 +53,10 @@ try
     LabJack.LJM.NamesToAddresses(numAddresses, aScanListNames, ...
         aScanList, aTypes);
 
-    scanRate = double(1000);  % Scans per second
+    scanRate = double(10000);  % Scans per second
     scansPerRead = int32(scanRate/2);
+    scansPerRead = 100;
+    
     % Stream reads will be stored in aData. Needs to be at least
     % numAddresses*scansPerRead in size.
     aData = NET.createArray('System.Double', numAddresses*scansPerRead);
@@ -119,14 +121,18 @@ try
               num2str(scanRate) ' Hz.'])
 
         tic
-
         disp(['Performing ' num2str(maxRequests) ' stream reads.'])
 
         totalScans = 0;
         curSkippedSamples = 0;
         totalSkippedSamples = 0;
+        
+        allData = {};
+        tW = scansPerRead/scanRate;
 
+        pause(tW)
         for i = 1:maxRequests
+            pause(tW)
             [~, devScanBL, ljmScanBL] = LabJack.LJM.eStreamRead( ...
                 handle, aData, 0, 0);
 
@@ -151,6 +157,7 @@ try
                   num2str(curSkippedSamples/numAddresses) ...
                   ', Scan Backlogs: Device = ' num2str(devScanBL) ...
                   ', LJM = ' num2str(ljmScanBL)])
+              allData{i}=aData;
         end
 
         timeElapsed = toc;
@@ -165,6 +172,16 @@ try
         disp(['Sample Rate = ' ...
               num2str(numAddresses*totalScans/timeElapsed) ...
               ' samples/second'])
+          
+          
+          Y_ALL=[];
+            for kk=1:length(allData)
+                Y = double(allData{kk});
+                Y = reshape(Y,[2 length(Y)/2]);
+                Y_ALL = [Y_ALL Y];
+            end
+    
+          
     catch e
         showErrorMessage(e)
     end
@@ -174,6 +191,10 @@ try
 
     % Close handle
     LabJack.LJM.Close(handle);
+    
+    figure(1);
+    clf
+    plot(Y_ALL(1,:))
 catch e
     showErrorMessage(e)
     LabJack.LJM.CloseAll();

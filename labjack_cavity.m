@@ -43,6 +43,9 @@ npt.outName = 'DAC0';
 % Default Acquisition Parameters
 npt.scanRate = 20e3;    % Data sampling rate [Hz]
 npt.numScans = 5500;    % Number of scans to take 
+npt.scansPerRead = npt.numScans; % Scan per read
+% npt.scansPerRead = 200;
+
 npt.delay = 0.1;        % Delay time between acquisitions [s]
 
 % Default lock set point 
@@ -111,11 +114,11 @@ hpCon = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
 
 % Acquisition panel
 hpAcq = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
-    'title','acquisition','position',[1 hF.Position(4)-195 200 120]);
+    'title','acquisition','position',[1 hF.Position(4)-195 200 140]);
 
 % Lock Panel
 hpLock = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
-    'title','lock','position',[1 hF.Position(4)-495 200 300]);
+    'title','lock','position',[1 hF.Position(4)-515 200 300]);
 
 % Main plot panel
 hpAx = uipanel('parent',hF,'units','pixels','backgroundcolor','w');
@@ -270,12 +273,12 @@ hb_stopAcq=uicontrol(hpAcq,'style','pushbutton','string','stop','Fontsize',10,..
 hb_stopAcq.Position = hb_startAcq.Position + [52 0 0 0];
 
 % acquisition settings panel
-n = {'Rate (Hz)', 'Num Scans','Delay (s)'};
+n = {'Rate (Hz)', 'Num Scans','Delay (s)','scans/read'};
 tAcq = uitable('parent',hpAcq,'RowName',n,'ColumnName',{},...
-    'fontsize',10,'data',[npt.scanRate; npt.numScans; npt.delay],...
+    'fontsize',10,'data',[npt.scanRate; npt.numScans; npt.delay;npt.scansPerRead],...
     'ColumnWidth',{50},'ColumnEditable',true,'CellEditCallback',@tacqcb);
 tAcq.Position(3:4)  =  tAcq.Extent(3:4);
-tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
+tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 90];
 
     function tacqcb(a,b)
         i = b.Indices(1,1);
@@ -311,6 +314,17 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 70];
                     a.Data(i)       = TOld;
                     warning('invalid delay time');                    
                 end    
+            case 4
+                NOld = b.PreviousData;
+                NNew = b.NewData;                
+                if isnumeric(NNew) && NNew > 10 && NNew <= npt.numScans
+                   a.Data(i)    = round(NNew);
+                   npt.scansPerRead = round(NNew);
+                else
+                    a.Data(i)       = NOld;
+                    warning('invalid scans per read');                    
+                end                
+                
         end
     end
 
@@ -525,8 +539,6 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
         npt.doLock = 1;
         hb_startLock.Enable     =' off';
         hb_stopLock.Enable      = 'on';         
-        tLockA.Enable           = 'off';        
-        tdF.Enable              = 'off';
         
         tOut.Enable             = 'off';
         hb_v_down_10.Enable     = 'off';
@@ -549,8 +561,6 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
         
         hb_startLock.Enable     = 'on';
         hb_stopLock.Enable      = 'off';  
-        tLockA.Enable           = 'on';
-        tdF.Enable              = 'on';
         
         tOut.Enable             = 'on';
         hb_v_down_10.Enable     = 'on';
@@ -602,10 +612,9 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             npt.ManualWrite = 0;
             npt.ManualWriteStep = 0;
         end
-        
         configureDeviceForTriggeredStream(npt);
         configureLJMForTriggeredStream;
-        pause(0.01);
+        pause(0.02);
         
         tic;
         tStatus.String = ['acquiring data ...' ];
@@ -617,7 +626,8 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
             t2=toc;
             tStatus.String = ['data acquired! (' num2str(round(t2,3)) ' s)'];
         else
-            tStatus.String = 'ERROR';
+            t2=toc;
+            tStatus.String = ['ERROR (' num2str(round(t2,3)) ' s)'];
             warning('error on data capture'); 
         end
         
@@ -730,21 +740,21 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
                if abs(npt.FSR-FSR_B)/npt.FSR < 0.05
                    % Log Current Status
                 try                          
-%                     [fname,isFile] = getLogFile(logRoot);    
-% 
-%                         T = timetable(...
-%                             datetime(datevec(now)),...
-%                             round(FSR_B,2),...
-%                             round(Tdelta,2),...
-%                             round(npt.OUT_VALUE,4));
-%                         T.Properties.VariableNames = ...
-%                             {'fsr meas (ms)','dt meas (ms)',' vout (V)'};
-%                         if ~isFile
-%                             writetimetable(T,fname,'Delimiter',',');
-%                         else
-%                             writetimetable(T,fname,'Delimiter',',','WriteVariableNames',false,...
-%                                 'WriteMode','append');
-%                         end                            
+                    [fname,isFile] = getLogFile(logRoot);    
+
+                        T = timetable(...
+                            datetime(datevec(now)),...
+                            round(FSR_B,2),...
+                            round(Tdelta,2),...
+                            round(npt.OUT_VALUE,4));
+                        T.Properties.VariableNames = ...
+                            {'fsr meas (ms)','dt meas (ms)',' vout (V)'};
+                        if ~isFile
+                            writetimetable(T,fname,'Delimiter',',');
+                        else
+                            writetimetable(T,fname,'Delimiter',',','WriteVariableNames',false,...
+                                'WriteMode','append');
+                        end                            
                    catch ME
                        warning('unable to log data');
                    end                        
@@ -822,24 +832,50 @@ function [Y_ALL,isGood] = performStream
     tstart=now;
     
     noScanNum = 0;
-    noScanMax = 5;
+    noScanMax = 10;
     
 %     fprintf([datestr(now,13 ) ' Streaming ...']);
     
+%     disp('Streaming');
+%     disp([' Scan Rate         : ' num2str(npt.scanRate)]);
+%     disp([' Num scans         : ' num2str(npt.numScans)]);
+%     disp([' total duration    : ' num2str(npt.numScans/npt.scanRate)]);
+%     disp([' scan per read     : ' num2str(npt.scansPerRead)]);
+%     disp([' # channels        : ' num2str(length(npt.aScanList))]);
+%     disp([' total sample rate : ' num2str(length(npt.aScanList)*npt.scanRate)]);
+% 
+% 
+    
+
+    % Read the trigger level so as to start the stream at a good time
+    tLevel = 0;
+    while tLevel == 0
+%         [~,tLevel]=LabJack.LJM.eReadName(npt.handle,'USER_RAM0_I32',0);
+        [~,tLevel]=LabJack.LJM.eReadName(npt.handle,'DIO0',0);
+    end
+    pause(0.01);
+        
+%         
+    sleepTime = double(npt.scansPerRead)/double(npt.scanRate);
+    
+
     % Begin the Stream
-    [~, npt.scanRate] = LabJack.LJM.eStreamStart(npt.handle, npt.scansPerRead, ...
-        npt.numAddresses, npt.aScanList, npt.scanRate);
-
-    while (totScans<npt.numScans) && isGood       
-        
-        sleepTime = double(npt.scansPerRead)/double(npt.scanRate);
-
-        pause(sleepTime);
-        
+    [ljm_err, npt.scanRate] = LabJack.LJM.eStreamStart(npt.handle, int32(npt.scansPerRead), ...
+        int32(npt.numAddresses), npt.aScanList, int32(npt.scanRate));
+    if ~isequal(string(ljm_err),'NOERROR')        
+        warning('error detected on stream start')
+    end
+    
+%     pause(1.5*sleepTime);
+    while (totScans<npt.numScans) && isGood   
+        pause(1.5*sleepTime);        
         try
             % Read data in buffer
             [~, devScanBL, ljmScanBL] = LabJack.LJM.eStreamRead( ...
                 npt.handle, npt.aData, 0, 0);
+%             disp([num2str(i) ' : ' num2str(ljmScanBL) ' ' num2str(devScanBL)]);
+            
+%             disp(size(double(npt.aData)))
 
             % Update scans
             totScans = totScans+npt.scansPerRead;
@@ -851,13 +887,15 @@ function [Y_ALL,isGood] = performStream
             i = i+1;        
 
             % Append Data
-            dataAll{i}=npt.aData;     
-        catch ME
-            
+            dataAll{i}=double(npt.aData);  
+%             figure(300+i)
+%             plot(double(npt.aData));
+        catch ME            
             if isequal(char(ME.ExceptionObject.LJMError) ,'NO_SCANS_RETURNED')
 %                 disp([datestr(now,13) ' no scans']);  
                 noScanNum = noScanNum + 1;
                 if noScanNum >= noScanMax
+                    warning([' too many empty scans, restarting']);                        
                     npt=disconnect(npt);
                     npt=connect(npt);
                     npt=configureStream(npt);
@@ -869,15 +907,16 @@ function [Y_ALL,isGood] = performStream
 
         end          
     end
+    
     try
         LabJack.LJM.eStreamStop(npt.handle);
     end
     Y_ALL=[];
     for kk=1:length(dataAll)
-        Y = double(dataAll{kk});
+        Y = dataAll{kk};
         Y = reshape(Y,[npt.numAddresses length(Y)/npt.numAddresses]);
         Y_ALL = [Y_ALL Y];
-    end  
+    end    
     tend=now;
     
 %     disp([' done (' num2str(round((tend-tstart)*24*60*60,2)) 's)']);
@@ -887,7 +926,7 @@ end
 function npt = connect(npt)
     try
         % Ethernet Connect
-        fprintf('Connecting to labjack ... ');
+        fprintf([datestr(now,13) ' Connecting to labjack ... ']);
         [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'ETHERNET', npt.myip, npt.handle);        
 % USB
 %         [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'USB', 'ANY', npt.handle);        
@@ -956,11 +995,13 @@ end
 
 
 function npt = configureStream(npt)
+    % Configure the strea
     T = npt.numScans * npt.numAddresses /npt.scanRate;
 
     disp(['nScan=' num2str(npt.numScans) ',' ...
         'nAddr=' num2str(npt.numAddresses) ',' ...
-        'rScan=' num2str(npt.scanRate) ' Hz' ...
+        'rScan=' num2str(npt.scanRate) ' Hz,' ...
+        'scansperRead= ' num2str(npt.scansPerRead) ...
         ' ==> ' num2str(round(T,1)) ' seconds']);
     t1 = now;
     fprintf('Configuring data stream ...');
@@ -981,10 +1022,12 @@ function npt = configureStream(npt)
 
     % Setup the scan Rate and ata
 %     npt.scansPerRead = min([int32(npt.scanRate/2) int32(npt.numScans)]);
-    npt.scansPerRead = npt.numScans;
+%     npt.scansPerRead = npt.numScans;
+%     npt.scansPerRead = 100;
+
     % Stream reads will be stored in aData. Needs to be at least
     % numAddresses*scansPerRead in size.
-    npt.aData = NET.createArray('System.Double', npt.numAddresses*npt.scansPerRead);
+    npt.aData = NET.createArray('System.Double', int32(npt.numAddresses*npt.scansPerRead));
 
     LabJack.LJM.eWriteName(npt.handle, 'STREAM_TRIGGER_INDEX', 0); % Trigger
     LabJack.LJM.eWriteName(npt.handle, 'STREAM_CLOCK_SOURCE', 0);  % Timing

@@ -68,7 +68,9 @@ npt.ManualWrite     = 0;
 npt.ManualWriteStep = 0;
 
 % Acquisition is default off
+npt.isConnected     = 0;
 npt.doAcq           = 0;
+npt.doLock          = 0;
 
 % Maximum time to remember old lock point [s]
 Nhis = 600;
@@ -103,7 +105,7 @@ set(hF,'Color','w','units','pixels','Name',guiname,...
     function closeGUI(fig,~)
         disp('Closing labjack cavity GUI...');
         try              
-            if npt.handle
+            if npt.isConnected~=0
                npt = disconnect(npt);
             end
         catch ME
@@ -119,7 +121,7 @@ hpCon = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
 
 % Acquisition panel
 hpAcq = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
-    'title','acquisition','position',[1 hF.Position(4)-195 200 140]);
+    'title','acquisition','position',[1 hF.Position(4)-215 200 140]);
 
 % Lock Panel
 hpLock = uipanel('parent',hF,'units','pixels','backgroundcolor','w',...
@@ -134,10 +136,39 @@ tStatus = uicontrol('parent',hpAx,'style','text','string','blah',...
     'backgroundcolor','w','horizontalalignment','left');
 tStatus.Position =[1 1 250 20];
 
-% Status string
+% Timing string
 tTiming = uicontrol('parent',hpAx,'style','text','string','blah',...
     'backgroundcolor','w','horizontalalignment','left');
 tTiming.Position =[1 20 200 20];
+
+% Label string
+tLabel = uicontrol('parent',hpAx,'style','text','string','DISCONNECTED',...
+    'backgroundcolor','w','horizontalalignment','right','fontsize',14,...
+    'fontweight','bold');
+tLabel.Position =[hpAx.Position(3)-175 3 170 20];
+
+    function updateLabel(npt)
+        if ~npt.isConnected
+            set(tLabel,'String','DISCONNECTED',...
+                'Foregroundcolor',[200 0 0]/255);
+        end        
+        
+        if npt.isConnected && ~npt.doLock && ~npt.doAcq
+            set(tLabel,'String','CONNECTED',...
+                'Foregroundcolor',[0 150 0]/255);
+        end
+        
+        if npt.isConnected && ~npt.doLock && npt.doAcq
+            set(tLabel,'String','ACQUIRING',...
+                'Foregroundcolor',[0    0.4470    0.7410]);
+        end
+
+        if npt.isConnected && npt.doLock && npt.doAcq
+            set(tLabel,'String','LOCK ENGAGED',...
+                'Foregroundcolor','r');
+        end
+
+    end
 
 % Resize Function
     function figResize(fig,~)
@@ -145,7 +176,8 @@ tTiming.Position =[1 20 200 20];
            hpCon.Position(2) = hF.Position(4) - hpCon.Position(4);
            hpAcq.Position(2) = hpCon.Position(2) - hpAcq.Position(4);
            hpLock.Position(2) = hpAcq.Position(2) - hpLock.Position(4);           
-           hpAx.Position(3:4) = [hF.Position(3)-hpCon.Position(3) hF.Position(4)];       
+           hpAx.Position(3:4) = [hF.Position(3)-hpCon.Position(3) hF.Position(4)];
+           tLabel.Position(1) = hpAx.Position(3)-tLabel.Position(3)-5;
        end
     end
 
@@ -208,6 +240,10 @@ ylabel('detuning (GHz)');
 yyaxis right
 pVOut = plot(now,nan,'r-');
 ylabel('output (V)');
+
+
+% disableDefaultInteractivity(ax1)
+% disableDefaultInteractivity(ax2)
 
 %% Connection and Acquisition
 
@@ -377,6 +413,8 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 90];
         configureLJMForTriggeredStream;
         drawnow;
         timer_labjack.Period = npt.delay;
+        
+        updateLabel(npt);
         start(timer_labjack);    
     end
 
@@ -396,13 +434,13 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 90];
         hb_v_down_1.Enable      = 'off';
         hb_v_up_1.Enable        = 'off';
         hb_v_up_10.Enable       = 'off';
-        tLockB.Enable           = 'off';
-        
-
+        tLockB.Enable           = 'off';   
         
         npt.doLock              = 0;        
         drawnow;                
-        stop(timer_labjack);    
+        updateLabel(npt);
+
+        stop(timer_labjack);            
     end
 %% Lock Graphics and Callbacks
 
@@ -550,13 +588,14 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
         
         npt.doLock = 1;
         hb_startLock.Enable     =' off';
-        hb_stopLock.Enable      = 'on';         
+        hb_stopLock.Enable      = 'on';    
         
         tOut.Enable             = 'off';
         hb_v_down_10.Enable     = 'off';
         hb_v_down_1.Enable      = 'off';
         hb_v_up_1.Enable        = 'off';
         hb_v_up_10.Enable       = 'off';
+        updateLabel(npt);
 
         if npt.LockMode ==4
            npt.FSR = range(pFSRA.XData);
@@ -565,6 +604,8 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
         % Setup and call eReadName to read a value.
         [ljmError, value] = LabJack.LJM.eReadName(npt.handle, npt.OUT, 0);        
         npt.OUT_VALUE_INIT = value;           
+        
+        
     end
 
     function stopLock(~,~)
@@ -573,12 +614,14 @@ tLockA.Position(1:2)  = [2 tLockB.Position(2) - 90];
         
         hb_startLock.Enable     = 'on';
         hb_stopLock.Enable      = 'off';  
-        
+
         tOut.Enable             = 'on';
         hb_v_down_10.Enable     = 'on';
         hb_v_down_1.Enable      = 'on';
         hb_v_up_1.Enable        = 'on';
         hb_v_up_10.Enable       = 'on';
+        updateLabel(npt);
+
     end
 
     function chOut(~,~,v)
@@ -949,7 +992,9 @@ function npt = connect(npt)
         try
             [ljmError] = LabJack.LJM.eStreamStop(npt.handle);
         end
+        npt.isConnected = 1;
         showDeviceInfo(npt.handle);  
+        updateLabel(npt);
     end
 end
 
@@ -957,6 +1002,8 @@ function npt=disconnect(npt)
     disp('Disconnecting');
     LabJack.LJM.Close(npt.handle);
     npt.handle=0;
+    npt.isConnected = 0;
+    updateLabel(npt)
 end
 
     function configureLJMForTriggeredStream

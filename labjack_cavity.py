@@ -450,7 +450,7 @@ w.configure(bg="yellow")
 top_frame = tk.Frame(w,bd=1,bg="white")
 top_frame.pack(anchor="nw",expand=False,fill="x",side="top")
 
-# Add clock 
+# Add clock  
 lbl = tk.Label(top_frame,text="Hello",bg="white",font=("calibri",18))
 lbl.pack(side="left")
 

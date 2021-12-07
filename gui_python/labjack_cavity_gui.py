@@ -35,7 +35,7 @@ def _from_rgb(rgb):
 # Create the GUI object
 m = tk.Tk()
 m.title(m_name)
-m.geometry("800x800")
+m.geometry("1200x690")
 m.configure(bg="yellow")
 
 # Options Frame
@@ -456,38 +456,10 @@ canvas.get_tk_widget().pack(side='top',fill='both',expand=True)
         #canvas1.get_tk_widget().pack(side="top",fill='both',expand=True)
         #canvas1.pack(side="top",fill='both',expand=True)
 
-"""
-## Initialize plots
-fig = Figure() # Initialize figure
 
-
-
-#fig,(ax1,ax2)=plt.subplots(2,1)
-
-fig.set_facecolor("white")
-
-# Top Axes
-ax1= fig.add_subplot(1,1,1)
-ax1.set_ylabel("voltage (V)")
-ax1.set_xlabel("time (s)")
-ax1.xaxis.set_label_position("top")
-ax1.xaxis.tick_top()
-ax1.set_xlim(0,10)
-ax1.set_ylim(vLim[0],vLim[1])
-ax1.patch.set_facecolor('#D7D7D7')
-
-
-# Bottom Axes
-#ax2= fig.add_subplot(2,1,2)
-#ax2.set_ylabel("residue (V)")
-#ax2.set_xlabel("time (s)")
-#ax2.set_xlim(0,10)
-#ax2.set_ylim(rLim[0],rLim[1])
-#ax2.patch.set_facecolor('#D7D7D7')
 
 """
-
-"""
+VALIDATION OF INPUT FOR ENTRIES
 import tk as tk
 
 class window2:

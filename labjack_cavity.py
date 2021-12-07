@@ -154,8 +154,8 @@ tnow=datetime.now()
 def openLabJack():
    
     print("Opening labjack on ..."+myip)
-    #handle=ljm.openS("T7","ETHERNET",t7name)
-    handle=ljm.openS("T7","ETHERNET", myip)# Connect via ip address (faster)
+    handle=ljm.openS("T7","USB",'470026765')
+    #handle=ljm.openS("T7","ETHERNET", myip)# Connect via ip address (faster)
     
     # Try to close stream in case it is running
     try:

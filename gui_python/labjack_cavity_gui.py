@@ -1,9 +1,19 @@
 # labjack_cavity_gui.py
-# Author : C Fujiwara
+# Author  : C Fujiwara
+# Created : 2021.12.10
+# Last Edit : (see GitHub)
 #
 # This GUI is used to run a labjack T7 as an oscilloscope for monitoring and 
 # a spectrum from a Fabry-Perot Interferometer.  Using a reference laser
 # as a source for peaks, it locks the separation between two peaks.
+#
+# This code was written as Cora's first real forray into GUI programming for 
+# python using the tkinter packages.  I also only have a vague understanding
+# of matplotlib as well. So this code could be optimized further. My primary
+# coding expertise is from MATLAB.
+#
+# READ ABOUT STRING VAR
+#https://www.pythontutorial.net/tkinter/tkinter-stringvar/
 
 # Options
 m_name = 'Labjack Cavity'
@@ -46,7 +56,7 @@ def _from_rgb(rgb):
 # Create the GUI object
 m = tk.Tk()
 m.title(m_name)
-m.geometry("1200x690")
+m.geometry("1280x720")
 m.configure(bg="yellow")
 
 # Options Frame

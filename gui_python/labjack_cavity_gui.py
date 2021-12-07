@@ -10,27 +10,38 @@ m_name = 'Labjack Cavity'
 font_name = 'arial narrow'
 font_name_lbl = 'arial narrow bold'
 
+#%% Packages
+
+# tkinter is the main GUI package
+import tkinter as tk
+
 # Import packages
 import sys
 import datetime
 from labjack import ljm
+import time
 
-#from matplotlib.figure import Figure
+# matplotlib packages
+
+#import matplotlib
+#matplotlib.use('TkAgg') # <-- THIS MAKES IT FAST!
 
 from matplotlib.gridspec import GridSpec
 from matplotlib.figure import Figure
+
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
 NavigationToolbar2Tk)
 
+# Math
 import numpy as np
-import tkinter as tk
-import time
 
+# Convert RGB triplet to tk color that is interprable
 def _from_rgb(rgb):
     """translates an rgb tuple of int to a tk friendly color code
     """
     return "#%02x%02x%02x" % rgb  
 
+#%% Main GUI Window
 
 # Create the GUI object
 m = tk.Tk()
@@ -70,9 +81,8 @@ fLock.grid(row=6,column=1,sticky='we')
 frame_plot = tk.Frame(m,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
 frame_plot.pack(side='right',fill='both',expand=1)
 
-###################
-# Connection Frame
-###################
+
+#%%% Connection Frame
 
 # Connect Label
 lConnect = tk.Label(frame_connect,text='Labjack Connection',font=(font_name_lbl,"12"),
@@ -103,9 +113,9 @@ bConnectStr=tk.Entry(frame_connect,
 bConnectStr.grid(row = 3, column=1,columnspan=3,sticky='NSEW')  
 
 
-###################
-# Output Frame
-################### 
+
+
+#%%% Output Frame  
 
 # Acquisition Label
 lOut = tk.Label(frame_output,text='Output',font=(font_name_lbl,"12"),
@@ -122,29 +132,29 @@ fOut_buttons.grid(row=2,column=1,sticky='w')
 
 # Down 10mV
 bAcqForce=tk.Button(fOut_buttons,text="-20 mV",
-                        bg='white',
+                        bg=_from_rgb((255,244,48)),
                         font=(font_name,"10"),width=7,bd=3)
 bAcqForce.grid(row = 1, column=1,sticky='w')   
 
-
 # Down 1mV
 bAcqStart=tk.Button(fOut_buttons,text="-5 mV",
-                        bg=_from_rgb((85, 205, 252)),
+                        bg=_from_rgb((255, 255, 255)),
                         font=(font_name,"10"),width=6,bd=3)
 bAcqStart.grid(row = 1, column=2,sticky='w')   
 
 # Up 1mV
 bAcqStop=tk.Button(fOut_buttons,text="+5 mV",
-                        bg=_from_rgb((247, 168, 184)),
+                        bg=_from_rgb((156, 89, 209)),
                         font=(font_name,"10"),width=6,bd=3)
 bAcqStop.grid(row = 1, column=3,sticky='w')  
 
 # Up 10mV
 bAcqStop=tk.Button(fOut_buttons,text="+ 20mV",
-                        bg=_from_rgb((247, 168, 184)),
-                        font=(font_name,"10"),width=6,bd=3)
+                        bg=_from_rgb((0, 0, 0)),
+                        font=(font_name,"10"),width=6,bd=3,fg='white')
 bAcqStop.grid(row = 1, column=4,sticky='nwse')  
 
+    
 #
 frame_out_tbl = tk.Frame(frame_output,bd=1,bg="white",
                                   highlightbackground="grey",highlightthickness=1)
@@ -173,9 +183,7 @@ tk.Entry(frame_out_tbl,
                         bg='white',font=(font_name,"10"),
                         width=10).grid(row = 3, column=2,columnspan=1,sticky='NSEW')    
 
-###################
-# Acquisition Frame
-###################
+#%%% Acquisition Frame
 
 # Acquisition Label
 lAcquire = tk.Label(frame_acquire,text='Acquisition',font=(font_name_lbl,"12"),
@@ -255,11 +263,7 @@ eDelay=tk.Entry(frame_acquire_tbl,
                         font=(font_name,"10"),width=14)
 eDelay.grid(row = 4, column=2,columnspan=1,sticky='w')  
 
-
-
-###################
-# Peaks Frame
-###################
+#%%% Peak Analysis Settings Frame
 
 # Peaks Label
 tk.Label(frame_peaks,text='Peak Analysis Settings',font=(font_name_lbl,"12"),
@@ -293,9 +297,7 @@ tk.Label(frame_peak_tbl,text='min peak (V)',font=(font_name,"10"),
 ePeakH=tk.Entry(frame_peak_tbl,bg='white',font=(font_name,"10"),width=14)
 ePeakH.grid(row = 3, column=2,columnspan=1,sticky='NSEW')  
 
-###################
-# Peaks Output Frame
-###################
+#%%% Peaks Analysis Output 
 
 # Peaks Label
 tk.Label(frame_peaks_out,text='Peak Analysis Output',font=(font_name_lbl,"12"),
@@ -339,11 +341,7 @@ L_df = tk.Label(frame_peakout_tbl,text='n/a',font=(font_name,"10"),
          bg='white',justify='left',bd=0,width=14,borderwidth=1,relief='groove')
 L_df.grid(row=4,column=2,columnspan=1,stick='w')        
 
-
-
-###################
-# Lock Frame
-###################
+#%%% Lock Frame
 
 tk.Label(fLock,text='Lock Settings',font=(font_name_lbl,"12"),
          bg='white',justify='left',height=1,bd=0).grid(
@@ -388,13 +386,11 @@ tk.Entry(fLock_tbl,bg='white',font=(font_name,"10"),width=14).grid(
     row = 3, column=2,columnspan=1,sticky='NSEW')  
 
 
-###################
-# Plot Frame
-################### 
+#%%% Plot Frame
 
 # Acquisition Label
 tk.Label(frame_plot,text='Plots',font=(font_name_lbl,"12"),
-                         bg='white',justify='left',height=1,bd=0).pack(side='top',anchor='nw')  
+         bg='white',justify='left',height=1,bd=0).pack(side='top',anchor='nw')  
   
 
 t = np.arange(0.01, 10.0, 0.01)
@@ -456,8 +452,9 @@ canvas.get_tk_widget().pack(side='top',fill='both',expand=True)
         #canvas1.get_tk_widget().pack(side="top",fill='both',expand=True)
         #canvas1.pack(side="top",fill='both',expand=True)
 
+# %% Callback Functions
 
-
+# %% Labjack Functions
 """
 VALIDATION OF INPUT FOR ENTRIES
 import tk as tk
@@ -489,7 +486,7 @@ root1 = tk.Tk()
 window2(root1)
 root1.mainloop()
 """
-
+#%% Main Loop
 
 # Start GUI
 m.mainloop()

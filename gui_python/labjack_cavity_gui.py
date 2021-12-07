@@ -106,11 +106,26 @@ bDisconnect=tk.Button(frame_connect,text="disconnect",
                         font=(font_name,"10"),width=11,bd=3)
 bDisconnect.grid(row = 2, column=3,sticky='NSEW')
 
+
+OPTIONS = [
+"IP address (ETH)",
+"serial number (USB)",
+"serial number (ETH)"
+] #etc
+
+
+variable = tk.StringVar(m)
+variable.set(OPTIONS[0]) # default value
+
+tk.OptionMenu(frame_connect, variable, *OPTIONS).grid(
+    row = 3, column=1,columnspan=3,sticky='NSEW')  
+
+
 # Descriptor
 bConnectStr=tk.Entry(frame_connect,
                         bg='white',
                         font=(font_name,"10"),justify='center')
-bConnectStr.grid(row = 3, column=1,columnspan=3,sticky='NSEW')  
+bConnectStr.grid(row = 4, column=1,columnspan=3,sticky='NSEW')  
 
 
 

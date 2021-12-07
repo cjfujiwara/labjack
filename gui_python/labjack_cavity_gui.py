@@ -109,21 +109,20 @@ bDisconnect.grid(row = 2, column=3,sticky='NSEW')
 # Descriptor
 bConnectStr=tk.Entry(frame_connect,
                         bg='white',
-                        font=(font_name,"10"))
+                        font=(font_name,"10"),justify='center')
 bConnectStr.grid(row = 3, column=1,columnspan=3,sticky='NSEW')  
-
 
 
 
 #%%% Output Frame  
 
-# Acquisition Label
+# Output Voltage Label
 lOut = tk.Label(frame_output,text='Output',font=(font_name_lbl,"12"),
                          bg='white',justify='left',height=1,bd=0)
 lOut.grid(row=1,column=1,sticky='w')  
 
 
-#
+# Frame for output voltage increment
 fOut_buttons = tk.Frame(frame_output,bd=1,bg="white",
                                   highlightbackground="grey",highlightthickness=1)
 fOut_buttons.grid(row=2,column=1,sticky='w')
@@ -155,7 +154,7 @@ bAcqStop=tk.Button(fOut_buttons,text="+ 20mV",
 bAcqStop.grid(row = 1, column=4,sticky='nwse')  
 
     
-#
+# Frame for output voltages
 frame_out_tbl = tk.Frame(frame_output,bd=1,bg="white",
                                   highlightbackground="grey",highlightthickness=1)
 frame_out_tbl.grid(row=3,column=1,sticky='nswe')
@@ -165,7 +164,7 @@ tk.Label(frame_out_tbl,text='output (V)',font=(font_name,"10"),
               bg='white',justify='left',height=1,bd=0,
               width=18).grid(row=1,column=1,columnspan=1,stick='w')  
 tk.Entry(frame_out_tbl,
-                        bg='white',font=(font_name,"10"),
+                        bg='white',font=(font_name,"10"),justify='center',
                         width=14).grid(row = 1, column=2,columnspan=1,sticky='NSEW')   
 
 # Max Voltage
@@ -173,52 +172,52 @@ tk.Label(frame_out_tbl,text='output MAX (V)',font=(font_name,"10"),
               bg='white',justify='left',height=1,bd=0,
               width=18).grid(row=2,column=1,columnspan=1,stick='w')  
 tk.Entry(frame_out_tbl,
-                        bg='white',font=(font_name,"10"),
+                        bg='white',font=(font_name,"10"),justify='center',
                         width=10).grid(row = 2, column=2,columnspan=1,sticky='NSEW')   
 # Min Voltage
 tk.Label(frame_out_tbl,text='output MIN (V)',font=(font_name,"10"),
               bg='white',justify='left',height=1,bd=0,
               width=18).grid(row=3,column=1,columnspan=1,stick='w')  
 tk.Entry(frame_out_tbl,
-                        bg='white',font=(font_name,"10"),
+                        bg='white',font=(font_name,"10"),justify='center',
                         width=10).grid(row = 3, column=2,columnspan=1,sticky='NSEW')    
 
 #%%% Acquisition Frame
 
-# Acquisition Label
+# Acquisition Settings
 lAcquire = tk.Label(frame_acquire,text='Acquisition',font=(font_name_lbl,"12"),
                          bg='white',justify='left',height=1,bd=0)
 lAcquire.grid(row=1,column=1,columnspan=1,sticky='w')  
 
 
-#
+# Frame for acquisition buttons
 frame_acquire_buttons = tk.Frame(frame_acquire,bd=1,bg="white",
                                   highlightbackground="grey",highlightthickness=1)
 frame_acquire_buttons.grid(row=2,column=1,sticky='w')
 
 
 
-# Start
+# force acquisition
 bAcqForce=tk.Button(frame_acquire_buttons,text="force acq.",
                         bg='white',
                         font=(font_name,"10"),width=9,bd=3)
 bAcqForce.grid(row = 1, column=1,sticky='w')   
 
 
-# Start
+# Start acquisition
 bAcqStart=tk.Button(frame_acquire_buttons,text="start acq.",
                         bg=_from_rgb((85, 205, 252)),
                         font=(font_name,"10"),width=9,bd=3)
 bAcqStart.grid(row = 1, column=2,sticky='w')   
 
-# Stop
+# Stop acquisition
 bAcqStop=tk.Button(frame_acquire_buttons,text="stop acq.",
                         bg=_from_rgb((247, 168, 184)),
                         font=(font_name,"10"),width=9,bd=3)
 bAcqStop.grid(row = 1, column=3,sticky='w')  
 
 
-# Table For Acquistion Settings
+# Frame for acquisition settings
 frame_acquire_tbl = tk.Frame(frame_acquire,bd=1,bg="white",
                                   highlightbackground="grey",highlightthickness=1)
 frame_acquire_tbl.grid(row=3,column=1,columnspan=3,sticky='nswe')
@@ -229,7 +228,7 @@ lScanRate = tk.Label(frame_acquire_tbl,text='scan rate (Hz)',font=(font_name,"10
 lScanRate.grid(row=1,column=1,columnspan=1,stick='w')  
 
 eScanRate=tk.Entry(frame_acquire_tbl,
-                        bg='white',
+                        bg='white',justify='center',
                         font=(font_name,"10"),width=14)
 eScanRate.grid(row = 1, column=2,columnspan=1,sticky='NSEW')   
 
@@ -239,7 +238,7 @@ lNumScans = tk.Label(frame_acquire_tbl,text='num scans',font=(font_name,"10"),
 lNumScans.grid(row=2,column=1,columnspan=1,stick='w')  
 
 eNumScans=tk.Entry(frame_acquire_tbl,
-                        bg='white',
+                        bg='white',justify='center',
                         font=(font_name,"10"),width=14)
 eNumScans.grid(row = 2, column=2,columnspan=1,sticky='NSEW')  
 
@@ -249,7 +248,7 @@ lScanPread = tk.Label(frame_acquire_tbl,text='scans per read',font=(font_name,"1
 lScanPread.grid(row=3,column=1,columnspan=1,stick='w')  
 
 eScanPread=tk.Entry(frame_acquire_tbl,
-                        bg='white',
+                        bg='white',justify='center',
                         font=(font_name,"10"),width=14)
 eScanPread.grid(row = 3, column=2,columnspan=1,sticky='w')  
 
@@ -259,19 +258,19 @@ lDelay = tk.Label(frame_acquire_tbl,text='delay (s)',font=(font_name,"10"),
 lDelay.grid(row=4,column=1,columnspan=1,stick='w')  
 
 eDelay=tk.Entry(frame_acquire_tbl,
-                        bg='white',
+                        bg='white',justify='center',
                         font=(font_name,"10"),width=14)
 eDelay.grid(row = 4, column=2,columnspan=1,sticky='w')  
 
 #%%% Peak Analysis Settings Frame
 
-# Peaks Label
+# Peaks Analysis Settings
 tk.Label(frame_peaks,text='Peak Analysis Settings',font=(font_name_lbl,"12"),
          bg='white',justify='left',height=1,bd=0).grid(
              row=1,column=1,columnspan=1,sticky='w')  
 
 
-# Table For Acquistion Settings
+# Frame for peak analysis settingss
 frame_peak_tbl = tk.Frame(frame_peaks,bd=1,bg="white",
                                   highlightbackground="grey",highlightthickness=1)
 frame_peak_tbl.grid(row=2,column=1,columnspan=3,sticky='nswe')
@@ -280,31 +279,31 @@ frame_peak_tbl.grid(row=2,column=1,columnspan=3,sticky='nswe')
 tk.Label(frame_peak_tbl,text='time start (ms)',font=(font_name,"10"),
          bg='white',justify='left',bd=0,width=18).grid(
              row=1,column=1,columnspan=1,stick='w')  
-ePeak1=tk.Entry(frame_peak_tbl,bg='white',font=(font_name,"10"),width=14)
+ePeak1=tk.Entry(frame_peak_tbl,bg='white',font=(font_name,"10"),justify='center',width=14)
 ePeak1.grid(row = 1, column=2,columnspan=1,sticky='NSEW')   
 
 # Time End
 tk.Label(frame_peak_tbl,text='time end (ms)',font=(font_name,"10"),
          bg='white',justify='left',bd=0,width=18).grid(
              row=2,column=1,columnspan=1,stick='w')  
-ePeak2=tk.Entry(frame_peak_tbl,bg='white',font=(font_name,"10"),width=14)
+ePeak2=tk.Entry(frame_peak_tbl,bg='white',font=(font_name,"10"),justify='center',width=14)
 ePeak2.grid(row = 2, column=2,columnspan=1,sticky='NSEW')  
 
 # Peak Height
 tk.Label(frame_peak_tbl,text='min peak (V)',font=(font_name,"10"),
          bg='white',justify='left',bd=0,width=18).grid(
              row=3,column=1,columnspan=1,stick='w')  
-ePeakH=tk.Entry(frame_peak_tbl,bg='white',font=(font_name,"10"),width=14)
+ePeakH=tk.Entry(frame_peak_tbl,bg='white',font=(font_name,"10"),justify='center',width=14)
 ePeakH.grid(row = 3, column=2,columnspan=1,sticky='NSEW')  
 
 #%%% Peaks Analysis Output 
 
-# Peaks Label
+# Peaks Analysis Output
 tk.Label(frame_peaks_out,text='Peak Analysis Output',font=(font_name_lbl,"12"),
          bg='white',justify='left',height=1,bd=0).grid(
              row=1,column=1,columnspan=1,sticky='w')  
 
-
+# Frame for peak analysis outputs
 frame_peakout_tbl = tk.Frame(frame_peaks_out,bd=1,bg="white",
                                   highlightbackground="grey",highlightthickness=1)
 frame_peakout_tbl.grid(row=2,column=1,columnspan=3,sticky='nswe')
@@ -324,9 +323,9 @@ tk.Label(frame_peakout_tbl,text='FSR meas. (ms)',font=(font_name,"10"),
 L_FSR = tk.Label(frame_peakout_tbl,text='n/a',font=(font_name,"10"),
          bg='white',justify='left',bd=0,width=14,borderwidth=1,relief='groove')
 L_FSR.grid(row=2,column=2,columnspan=1,stick='w')  
-             
+          
 # dT
-tk.Label(frame_peakout_tbl,text='dT meas. (ms)',font=(font_name,"10"),
+tk.Label(frame_peakout_tbl,text='\u0394T meas. (ms)',font=(font_name,"10"),
          bg='white',justify='left',bd=0,width=18).grid(
              row=3,column=1,columnspan=1,stick='w')  
 L_dT = tk.Label(frame_peakout_tbl,text='n/a',font=(font_name,"10"),
@@ -334,7 +333,7 @@ L_dT = tk.Label(frame_peakout_tbl,text='n/a',font=(font_name,"10"),
 L_dT.grid(row=3,column=2,columnspan=1,stick='w')  
 
 # dF
-tk.Label(frame_peakout_tbl,text='df meas. (GHz)',font=(font_name,"10"),
+tk.Label(frame_peakout_tbl,text='\u0394f meas. (GHz)',font=(font_name,"10"),
          bg='white',justify='left',bd=0,width=18).grid(
              row=4,column=1,columnspan=1,stick='w')  
 L_df = tk.Label(frame_peakout_tbl,text='n/a',font=(font_name,"10"),
@@ -343,10 +342,11 @@ L_df.grid(row=4,column=2,columnspan=1,stick='w')
 
 #%%% Lock Frame
 
+# Lock Settings Label
 tk.Label(fLock,text='Lock Settings',font=(font_name_lbl,"12"),
          bg='white',justify='left',height=1,bd=0).grid(
                              row=1,column=1,columnspan=1,sticky='w')  
-
+# Lock Button Frame
 fLockButt = tk.Frame(fLock,bd=1,bg="white",
                      highlightbackground="grey",highlightthickness=1)
 fLockButt.grid(row=2,column=1,sticky='w')
@@ -355,7 +355,7 @@ fLockButt.grid(row=2,column=1,sticky='w')
 bAcqForce=tk.Button(fLockButt,text="engage lock",bg=_from_rgb((137, 207, 240)),font=(font_name,"10"),
                     width=15,bd=3).grid(row = 1, column=1,sticky='w')  
 
-# Stop
+# Stop Lock
 bAcqForce=tk.Button(fLockButt,text="stop lock",bg=_from_rgb((255, 165, 0)),font=(font_name,"10"),
                     width=14,bd=3).grid(row = 1, column=2,sticky='w')  
 
@@ -365,24 +365,24 @@ fLock_tbl = tk.Frame(fLock,bd=1,bg="white",
 fLock_tbl.grid(row=3,column=1,columnspan=3,sticky='nswe')
 
 # df set
-tk.Label(fLock_tbl,text='df set (GHz)',font=(font_name,"10"),
+tk.Label(fLock_tbl,text='\u0394f set (GHz)',font=(font_name,"10"),
          bg='white',justify='left',height=1,bd=0,width=18).grid(
              row=1,column=1,columnspan=1,stick='w')
-tk.Entry(fLock_tbl,bg='white',font=(font_name,"10"),width=14).grid(
+tk.Entry(fLock_tbl,bg='white',font=(font_name,"10"),justify='center',width=14).grid(
     row = 1, column=2,columnspan=1,sticky='NSEW')   
 
 # hysteresis
 tk.Label(fLock_tbl,text='hysteresis (GHz)',font=(font_name,"10"),
          bg='white',justify='left',height=1,bd=0,width=18).grid(
              row=2,column=1,columnspan=1,stick='w')
-tk.Entry(fLock_tbl,bg='white',font=(font_name,"10"),width=14).grid(
+tk.Entry(fLock_tbl,bg='white',font=(font_name,"10"),justify='center',width=14).grid(
     row = 2, column=2,columnspan=1,sticky='NSEW')  
 
 # step size
-tk.Label(fLock_tbl,text='step size (mV)',font=(font_name,"10"),
+tk.Label(fLock_tbl,text='\u0394V output step (mV)',font=(font_name,"10"),
          bg='white',justify='left',height=1,bd=0,width=18).grid(
              row=3,column=1,columnspan=1,stick='w')
-tk.Entry(fLock_tbl,bg='white',font=(font_name,"10"),width=14).grid(
+tk.Entry(fLock_tbl,bg='white',font=(font_name,"10"),justify='center',width=14).grid(
     row = 3, column=2,columnspan=1,sticky='NSEW')  
 
 
@@ -405,7 +405,7 @@ fig = Figure()
 gs = GridSpec(3, 1, figure=fig)
 
 ax1 = fig.add_subplot(gs[:-1, :])
-ax1.set_ylabel("voltage (V)",color='black')
+ax1.set_ylabel("cavity voltage (V)",color='black')
 ax1.set_xlabel("time (ms)")
 ax1.plot(t,data1,color='black')
 ax1.tick_params(axis='y', labelcolor='black')
@@ -413,13 +413,13 @@ ax1.tick_params(axis='y', labelcolor='black')
 color = 'tab:blue'
 ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 color = 'tab:red'
-ax2.set_ylabel('ramp (V)', color=color)  # we already handled the x-label with ax1
+ax2.set_ylabel('cavity ramp (V)', color=color)  # we already handled the x-label with ax1
 ax2.plot(t, data2, color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 ax3 = fig.add_subplot(gs[-1, :])
 ax3.plot(t, t, color='black')
-ax3.set_ylabel("df measure (GHz)")
+ax3.set_ylabel(r"$\Delta f~\mathrm{measure}~(\mathrm{GHz})$")
 ax3.set_xlabel("time")
 
 color = 'tab:blue'

@@ -29,10 +29,11 @@ import sys
 import datetime
 from labjack import ljm
 import time
-
+from threading import Thread
+import queue
 
 import ljm_stream_util
-
+import code
 # matplotlib packages
 from matplotlib.gridspec import GridSpec
 from matplotlib.figure import Figure
@@ -41,26 +42,174 @@ NavigationToolbar2Tk)
 
 # Math
 import numpy as np
-
+import scipy
+import scipy.signal
 # Convert RGB triplet to tk color that is interprable
 def _from_rgb(rgb):
     """translates an rgb tuple of int to a tk friendly color code
     """
     return "#%02x%02x%02x" % rgb  
 
+
+class stream(Thread):
+    def __init__(self,handle):
+        super().__init__()
+        self.handle = handle
+        self.goodStream         = True
+        self.Status             = 'idle'
+        self.StatusColor        = 'yellow'
+
+        # Stream Properties
+        self.scanrate           = None
+        self.numscans           = None
+        self.scansperread       = None
+
+        # Read Channels
+        self.InputChannels      = None
+        self.TriggerChannel     = None        
+        
+        # Data
+        self.t                  = None
+        self.data               = None
+        self.lastacquisition    = None 
+        
+        self.delay              = None
+       
+    def run(self):
+        #self.AcqStatus.config(text='acquiring ... ',fg='green')
+        #self.AcqStatus.update()  
+        
+        self.Status = 'delaying ...'
+        self.StatusColor = 'red'
+        time.sleep(self.delay/1000)
+        
+        self.Status = 'initializing acquisition'
+        self.StatusColor = 'red'
+        
+        # Scan list addresses for streamBurst    
+        nAddr = len(self.InputChannels)
+        aScanList = ljm.namesToAddresses(nAddr, self.InputChannels)[0]   
+        
+        # Get the scan rate (Hz) and number of total samples    
+        scanrate = float(self.scanrate)
+        numscans=int(self.numscans)
+        scansperread=int(self.scansperread)
+        
+        # Other
+        Tacquire = numscans/scanrate
+        #samplerate = scanrate*nAddr
+        
+        # Display acquisition settings
+        #print("\n " + "Scan rate".ljust(20) + ": %s Hz" % scanrate)
+        #print(" " + "Number of Scans".ljust(20) + ": %s" % numscans)
+        #print(" " + "Total Duration".ljust(20) + ": %s sec" % Tacquire) 
+        #print(" " + "Scans per read".ljust(20) + ": %s" % scansperread) 
+        #print(" " + "Number of Channels".ljust(20) + ": %s" % nAddr)
+        #print(" " + "Total Sample rate".ljust(20) + ": %s Hz" % samplerate)    
+        
+        # Initilize Counters
+        totScans = 0            # Total scans read
+        totSkip = 0             # Total skipped samples
+        i = 1                   # Number of reads
+        ljmScanBacklog = 0      # Backlog on the LJM
+        dataAll=[]              # All data
+        sleepTime = float(scansperread)/float(scanrate)
+
+        # Configure and start stream
+        scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)   
+        t2 = time.time()
+        time.sleep(sleepTime + 0.01)
+        self.Status = 'acquiring ...'
+        self.StatusColor ='green'
+        while (totScans < numscans) & self.goodStream:
+            try:                
+                ret = ljm.eStreamRead(self.handle) # read data in buffer
+                # Recrod the data
+                aData = ret[0]
+                #ljmScanBacklog = ret[2]
+                scans = len(aData) / nAddr
+                totScans += scans 
+                dataAll+=aData                
+             
+                # -9999 values are skipped ones
+                curSkip = aData.count(-9999.0)
+                totSkip += curSkip    
+                
+                #print("eStreamRead %i : %i scans, %0.0f scans skipped, %i device backlog, %i in LJM backlog" % (i,totScans, curSkip/nAddr, ret[1], ljmScanBacklog))
+
+                # Increment read counter    
+                i += 1
+                
+                if totScans<numscans:
+                    time.sleep(sleepTime)
+
+            except ljm.LJMError as err:
+                if err.errorCode == ljm.errorcodes.NO_SCANS_RETURNED:  
+                    if ((time.time()-t2)-Tacquire)>1:
+                        self.Status = 'acquisition timeout'
+                        self.StatusColor ='red'
+
+                        #self.AcqStatus.config(text='ACQUISITION TIMEOUT',fg='red')
+                        #self.AcqStatus.update()
+                        self.goodStream=0
+                    sys.stdout.flush()
+                    continue
+                else: 
+                    ljme = sys.exc_info()[1]
+                    print(ljme)
+                    self.goodStream=False  
+
+        tAcq = time.strftime('%Y-%m-%d_%H-%M-%S') 
+
+        try:
+            ljm.eStreamStop(self.handle)   
+        except ljm.LJMError:
+            ljme = sys.exc_info()[1]
+            print(ljme)
+        except Exception:
+            e = sys.exc_info()[1]
+            print(e)                
+        if self.goodStream:  
+            t3=time.time()
+            print(t3-t2)
+            #self.AcqStatus.config(text='processing ...',fg='green')
+            #self.AcqStatus.update()
+            
+            #tVec = (np.array([range(numscans)]).T)/scanrate
+            tVec = np.linspace(0,numscans-1,numscans)/scanrate
+            data = np.zeros((numscans,nAddr))
+            data = np.array(dataAll).reshape(numscans,nAddr)   
+
+            
+            # Convert data to mV and ms
+            self.t = 1000*tVec
+            self.data = 1000*data
+            self.lastacquisition = tAcq
+            if totSkip>0:
+                print("lost frames : " + str(totSkip))
+        else:
+            time.sleep(0.1)
+
+        #self.AcqStatus.config(text='not acquiring',fg='red')
+        #self.AcqStatus.update()        
+        self.Status = 'idle'    
+        self.StatusColor ='brown'
+
+
 class App(tk.Tk):
     def __init__(self):        
         # Create the GUI object
         super().__init__()
         self.title('Labjack Cavity')
-        self.geometry("1280x720")
+        self.geometry("1280x780")
         
         self.connectOptions = [
         "IP address (ETH)",
         "serial number (USB)",
         "serial number (ETH)"
         ]    
-        
+        self.vcmdNum = (self.register(self.validNum),'%P')
+
         # Internal Labjack Settings
         self.isConnected = False
         self.TriggerChannel = "DIO0"
@@ -95,12 +244,55 @@ class App(tk.Tk):
         self.t = np.arange(0.01, 10.0, 0.01)
         self.data1 = np.exp(self.t)
         self.data2 = np.sin(2 * np.pi * self.t)
-        self.data3 = self.t
+        self.data3 = self.t        
+                
+        self.doAutoAcq = False
+        self.doLock = False
         
         self.defaultSettings()        
         self.create_frames()        
         self.create_widgets() 
         self.create_plots()
+        
+        self.set_state(self.Foutput,'disabled')
+        self.set_state(self.FacqButt,'disabled')
+        self.set_state(self.FlockButt,'disabled')
+        
+            
+        
+    def process_stream(self, thread):
+        if thread.is_alive():
+            # check the thread every 100ms
+            self.after(100, lambda: self.process_stream(thread))
+            self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
+            self.AcqStatus.update()   
+        else:
+            self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
+                
+            if thread.goodStream:
+                self.t = thread.t
+                self.data = thread.data
+                self.lastAcquisition = thread.lastacquisition                
+                self.update()
+                
+            if self.doAutoAcq:                
+                self.doTrigAcq()
+            else:
+                self.forcebutt['state']='normal'
+                self.acqbutt['state']='normal' 
+                self.set_state(self.acqtbl,'normal')
+                self.set_state(self.Fpeak,'normal')
+
+
+    #Define a Function to enable the frame
+    def set_state(self,frame,mystate):
+        children = frame.winfo_children()
+        for child in children:
+            wtype = child.winfo_class()
+            if wtype not in ('Frame','Labelframe'):
+                child.configure(state=mystate)            
+            else:
+                self.set_state(child,mystate)
     
     def create_frames(self):
         self.Fopt = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
@@ -135,9 +327,12 @@ class App(tk.Tk):
         self.Fplot.pack(side='right',fill='both',expand=1)
         
     def defaultSettings(self):
-        self.connectStr.set('470026765')    
-
-        self.connectMode.set(self.connectOptions[1])
+        self.connectStr.set('470026765')   
+        self.connectMode.set(self.connectOptions[2])
+        
+        self.connectStr.set('192.168.0.177')   
+        self.connectMode.set(self.connectOptions[0])
+        
         # Output voltage default values
         self.output.set('??')
         self.outputMax.set('2500')
@@ -160,6 +355,14 @@ class App(tk.Tk):
         self.dFset.set('-200')
         self.hys.set('200')
         self.dV.set('1')  
+        
+    def set_output_state(self,state):
+        self.bDa['state'] = state
+        self.bDb['state'] = state
+        self.bDc['state'] = state
+        self.bDd['state'] = state
+        self.bDe['state'] = state
+        self.bDf['state'] = state
 
     def create_widgets(self):
         # Connect Label
@@ -175,11 +378,15 @@ class App(tk.Tk):
         tk.Button(self.Fconnect,text='help',font=(font_name,"10"),
                   width=6,bd=3).grid(row=3,column=1)        
         # Connect
-        tk.Button(self.Fconnect,text="connect",bg=_from_rgb((80, 200, 120)),
-                  font=(font_name,"10"),width=11,bd=3,command=self.connect).grid(row=3,column=2,sticky='EW')   
+        self.b1=tk.Button(self.Fconnect,text="connect",bg=_from_rgb((80, 200, 120)),
+                  font=(font_name,"10"),width=11,bd=3,command=self.connect)
+        self.b1.grid(row=3,column=2,sticky='EW')   
+        
         # Disconnect
-        tk.Button(self.Fconnect,text="disconnect",bg=_from_rgb((255, 102, 120)),
-                  font=(font_name,"10"),width=11,bd=3,command=self.disconnect).grid(row = 3, column=3,sticky='NSEW')
+        self.b2=tk.Button(self.Fconnect,text="disconnect",bg=_from_rgb((255, 102, 120)),
+                  font=(font_name,"10"),width=11,bd=3,command=self.disconnect,state='disabled')
+        self.b2.grid(row = 3, column=3,sticky='NSEW')
+        
         # Connect options       
         tk.OptionMenu(self.Fconnect, self.connectMode, *self.connectOptions).grid(
             row=4,column=1,columnspan=3,sticky='NSEW')  
@@ -193,28 +400,34 @@ class App(tk.Tk):
         f.grid(row=2,column=1)      
         
         # Down 100 mV
-        tk.Button(f,text="-100",bg=_from_rgb((255,0,24)),font=(font_name,"10"),
-                  width=4,bd=3,command=lambda: self.increment(-100)).grid(row=1,column=1,sticky='w')  
+        self.bDa=tk.Button(f,text="-100",bg=_from_rgb((255,0,24)),font=(font_name,"10"),
+                  width=4,bd=3,command=lambda: self.increment(-100))
+        self.bDa.grid(row=1,column=1,sticky='w')  
         
         # Down 20 mV
-        tk.Button(f,text="-20",bg=_from_rgb((255,165,44)),font=(font_name,"10"),
-                  width=4,bd=3,command=lambda: self.increment(-20)).grid(row=1,column=2,sticky='w')
+        self.bDb=tk.Button(f,text="-20",bg=_from_rgb((255,165,44)),font=(font_name,"10"),
+                  width=4,bd=3,command=lambda: self.increment(-20))
+        self.bDb.grid(row=1,column=2,sticky='w')
            
         # Down 5 mV
-        tk.Button(f,text="-5",bg=_from_rgb((255, 255, 65)),
-                  font=(font_name,"10"),width=2,bd=3,command=lambda: self.increment(-5)).grid(
-                                    row=1,column=3,sticky='w')   
+        self.bDc=tk.Button(f,text="-5",bg=_from_rgb((255, 255, 65)),
+                  font=(font_name,"10"),width=2,bd=3,command=lambda: self.increment(-5))
+        self.bDc.grid(row=1,column=3,sticky='w')   
         
         # Up 5 mV
-        tk.Button(f,text="+5",bg=_from_rgb((0, 128, 24)),font=(font_name,"10"),
-                  width=2,bd=3,fg='white',command=lambda: self.increment(5)).grid(row=1,column=4,sticky='w')  
+        self.bDd=tk.Button(f,text="+5",bg=_from_rgb((0, 128, 24)),font=(font_name,"10"),
+                  width=2,bd=3,fg='white',command=lambda: self.increment(5))
+        self.bDd.grid(row=1,column=4,sticky='w'  )
         
+                
         # Up 20 mV
-        tk.Button(f,text="+ 20",bg=_from_rgb((0, 0, 249)),font=(font_name,"10"),
-                  width=4,bd=3,fg='white',command=lambda: self.increment(20)).grid(row = 1, column=5,sticky='nwse')          
+        self.bDe=tk.Button(f,text="+ 20",bg=_from_rgb((0, 0, 249)),font=(font_name,"10"),
+                  width=4,bd=3,fg='white',command=lambda: self.increment(20))
+        self.bDe.grid(row = 1, column=5,sticky='nwse')          
         # Up 100 mV
-        tk.Button(f,text="+ 100",bg=_from_rgb((134, 0, 125)),font=(font_name,"10"),
-                  width=4,bd=3,fg='white',command=lambda: self.increment(100)).grid(row = 1, column=6,sticky='nwse')          
+        self.bDf=tk.Button(f,text="+ 100",bg=_from_rgb((134, 0, 125)),font=(font_name,"10"),
+                  width=4,bd=3,fg='white',command=lambda: self.increment(100))
+        self.bDf.grid(row = 1, column=6,sticky='nwse')          
                 
         # Frame for output voltages
         tbl = tk.Frame(self.Foutput,bd=1,bg="white",highlightbackground="grey",highlightthickness=1)
@@ -232,74 +445,81 @@ class App(tk.Tk):
                  justify='left',height=1,bd=0,width=18).grid(
                      row=2,column=1,columnspan=1,stick='w')  
         tk.Entry(tbl,bg='white',font=(font_name,"10"),justify='center',textvariable=self.outputMax,
-                 width=10).grid(row = 2, column=2,columnspan=1,sticky='NSEW')   
+                 width=10,validatecommand=self.vcmdNum,validate='key').grid(row = 2, column=2,columnspan=1,sticky='NSEW')   
         # Min Voltage
         tk.Label(tbl,text='output MIN (mV)',font=(font_name,"10"),bg='white',
                  justify='left',height=1,bd=0,width=18).grid(
                      row=3,column=1,columnspan=1,stick='w')  
         tk.Entry(tbl,bg='white',font=(font_name,"10"),justify='center',textvariable=self.outputMin,
-                 width=10).grid(row = 3, column=2,columnspan=1,sticky='NSEW')    
+                 width=10,validatecommand=self.vcmdNum,validate='key').grid(row = 3, column=2,columnspan=1,sticky='NSEW')    
         
         # Acquisition Settings
         tk.Label(self.Facquire,text='Acquisition',font=(font_name_lbl,"12"),
                  bg='white',justify='left',height=1,bd=0).grid(
-                     row=1,column=1,columnspan=1,sticky='w')
+                     row=1,column=1,columnspan=1,sticky='w')                    
+                     
+        # Acqsuisition Status
+        self.AcqStatus = tk.Label(self.Facquire,font=(font_name,"10"),
+                 bg='white',justify='left',bd=0,fg='red',text='not acquiring')
+        self.AcqStatus.grid(row=2,column=1,columnspan=3,stick='w') 
                      
         # Frame for acquisition buttons
-        f2 = tk.Frame(self.Facquire,bd=1,bg="white",highlightbackground="grey",
+        self.FacqButt= tk.Frame(self.Facquire,bd=1,bg="white",highlightbackground="grey",
                       highlightthickness=1)
-        f2.grid(row=2,column=1,sticky='w')
+        self.FacqButt.grid(row=3,column=1,sticky='w')
 
         # force acquisition
-        tk.Button(f2,text="force acq.",bg='white',font=(font_name,"10"),
-                  width=9,bd=3,command=self.forceacq).grid(row = 1, column=1,sticky='w')  
+        self.forcebutt=tk.Button(self.FacqButt,text="force acq.",bg='white',font=(font_name,"10"),
+                  width=9,bd=3,command=self.forceacq)
+        self.forcebutt.grid(row = 1, column=1,sticky='w')  
 
         # Start acquisition
-        tk.Button(f2,text="start acq.",bg=_from_rgb((85, 205, 252)),
-                  font=(font_name,"10"),width=9,bd=3).grid(row=1,column=2,sticky='w')   
+        self.acqbutt=tk.Button(self.FacqButt,text="start acq.",bg=_from_rgb((85, 205, 252)),
+                  font=(font_name,"10"),width=9,bd=3,command=self.startacq)
+        self.acqbutt.grid(row=1,column=2,sticky='w')   
 
         # Stop acquisition
-        tk.Button(f2,text="stop acq.",bg=_from_rgb((247, 168, 184)),
-                  font=(font_name,"10"),width=9,bd=3).grid(row = 1, column=3,sticky='w')  
+        tk.Button(self.FacqButt,text="stop acq.",bg=_from_rgb((247, 168, 184)),
+                  font=(font_name,"10"),width=9,bd=3,command=self.stopacq).grid(row = 1, column=3,sticky='w')  
 
-        tbl2 = tk.Frame(self.Facquire,bd=1,bg="white",highlightbackground="grey",
+        self.acqtbl = tk.Frame(self.Facquire,bd=1,bg="white",highlightbackground="grey",
                         highlightthickness=1)
-        tbl2.grid(row=3,column=1,columnspan=3,sticky='nswe')        
+        self.acqtbl.grid(row=4,column=1,columnspan=3,sticky='nswe')        
 
         # Scan Rate
-        tk.Label(tbl2,text='scan rate (Hz)',font=(font_name,"10"),
+        tk.Label(self.acqtbl,text='scan rate (Hz)',font=(font_name,"10"),
                  bg='white',justify='left',height=1,bd=0,width=18).grid(
                      row=1,column=1,columnspan=1,stick='w')
                     
-        tk.Entry(tbl2,bg='white',justify='center',textvariable=self.scanrate,
-                 font=(font_name,"10"),width=14).grid(
+        tk.Entry(self.acqtbl,bg='white',justify='center',textvariable=self.scanrate,
+                 font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
                      row=1,column=2,columnspan=1,sticky='NSEW')   
 
         # Num Scans
-        tk.Label(tbl2,text='num scans',font=(font_name,"10"),bg='white',
+        tk.Label(self.acqtbl,text='num scans',font=(font_name,"10"),bg='white',
                  justify='left',height=1,bd=0,width=18).grid(
                      row=2,column=1,columnspan=1,stick='w')  
 
-        tk.Entry(tbl2,bg='white',justify='center',textvariable=self.numscans,
-                 font=(font_name,"10"),width=14).grid(
+        tk.Entry(self.acqtbl,bg='white',justify='center',textvariable=self.numscans,
+                 font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
                      row=2,column=2,columnspan=1,sticky='NSEW')  
 
         # Scans Per read
-        tk.Label(tbl2,text='scans per read',font=(font_name,"10"),
+        tk.Label(self.acqtbl,text='scans per read',font=(font_name,"10"),
                  bg='white',justify='left',height=1,bd=0,width=18).grid(
                      row=3,column=1,columnspan=1,stick='w')  
 
-        tk.Entry(tbl2,bg='white',justify='center',textvariable=self.scansperread,
-                 font=(font_name,"10"),width=14).grid(
+        tk.Entry(self.acqtbl,bg='white',justify='center',textvariable=self.scansperread,
+                 font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
                      row=3,column=2,columnspan=1,sticky='w')  
 
         # Delay
-        tk.Label(tbl2,text='delay (ms)',font=(font_name,"10"),bg='white',
+        tk.Label(self.acqtbl,text='delay (ms)',font=(font_name,"10"),bg='white',
                  justify='left',height=1,bd=0,width=18).grid(
                      row=4,column=1,columnspan=1,stick='w')  
 
-        tk.Entry(tbl2,bg='white',justify='center',textvariable=self.delay,
-                 font=(font_name,"10"),width=14).grid(
+        tk.Entry(self.acqtbl,bg='white',justify='center',textvariable=self.delay,
+                 font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
                      row=4,column=2,columnspan=1,sticky='w')  
 
         # Peaks Analysis Settings
@@ -312,20 +532,30 @@ class App(tk.Tk):
         tbl3 = tk.Frame(self.Fpeak,bd=1,bg="white",highlightbackground="grey",highlightthickness=1)
         tbl3.grid(row=2,column=1,columnspan=3,sticky='nswe')
         
+    
+        vcmd1 = (self.register(self.onValidateStart),
+                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+        vcmd2 = (self.register(self.onValidateEnd),
+                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')        
+        
         # Time Start
         tk.Label(tbl3,text='time start (ms)',font=(font_name,"10"),
                  bg='white',justify='left',bd=0,width=18).grid(
                      row=1,column=1,columnspan=1,stick='w')  
         tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.tstart).grid(
+                 width=14,textvariable=self.tstart,
+                 validatecommand=vcmd1,validate='key').grid(
                      row=1,column=2,columnspan=1,sticky='NSEW')   
-        
+                     
+                
+                     
         # Time End
         tk.Label(tbl3,text='time end (ms)',font=(font_name,"10"),
                  bg='white',justify='left',bd=0,width=18).grid(
                      row=2,column=1,columnspan=1,stick='w')  
         tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.tend).grid(
+                 width=14,textvariable=self.tend,
+                 validatecommand=vcmd2,validate='key').grid(
                      row=2,column=2,columnspan=1,sticky='NSEW')  
         
         # Peak Height
@@ -333,14 +563,14 @@ class App(tk.Tk):
                  bg='white',justify='left',bd=0,width=18).grid(
                      row=3,column=1,columnspan=1,stick='w')  
         tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.minpeak).grid(
+                 width=14,textvariable=self.minpeak,validatecommand=self.vcmdNum,validate='key').grid(
                      row=3,column=2,columnspan=1,sticky='NSEW')  
         
         # FSR
         tk.Label(tbl3,text='FSR (MHz)',font=(font_name,"10"),bg='white',
                  justify='left',bd=0,width=18).grid(row=4,column=1,columnspan=1,stick='w') 
         tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.FSR).grid(row=4,column=2,columnspan=1,sticky='NSEW')  
+                 width=14,textvariable=self.FSR,validatecommand=self.vcmdNum,validate='key').grid(row=4,column=2,columnspan=1,sticky='NSEW')  
 
         # Peaks Analysis Output
         tk.Label(self.Fpeakout,text='Peak Analysis Output',font=(font_name_lbl,"12"),
@@ -379,22 +609,32 @@ class App(tk.Tk):
         tk.Label(self.Flock,text='Lock Settings',font=(font_name_lbl,"12"),
                  bg='white',justify='left',height=1,bd=0).grid(
                                      row=1,column=1,columnspan=1,sticky='w')  
+                     
+                             
+        # Acqsuisition Status
+        self.LockStatus = tk.Label(self.Flock,font=(font_name,"10"),
+                 bg='white',justify='left',bd=0,fg='red',text='lock not engaged')
+        self.LockStatus.grid(row=2,column=1,columnspan=3,stick='w') 
+                     
         # Lock Button Frame
-        f4 = tk.Frame(self.Flock,bd=1,bg="white",
+        self.FlockButt = tk.Frame(self.Flock,bd=1,bg="white",
                              highlightbackground="grey",highlightthickness=1)
-        f4.grid(row=2,column=1,sticky='w')
+        self.FlockButt.grid(row=3,column=1,sticky='w')
+
         
         # Start Lock
-        tk.Button(f4,text="engage lock",bg=_from_rgb((137, 207, 240)),font=(font_name,"10"),
-                  width=15,bd=3).grid(row = 1, column=1,sticky='w')  
+        self.dolockbutt=tk.Button(self.FlockButt,text="engage lock",bg=_from_rgb((137, 207, 240)),font=(font_name,"10"),
+                  width=15,bd=3,command=self.startlock)
+        self.dolockbutt.grid(row = 1, column=1,sticky='w')  
         
         # Stop Lock
-        tk.Button(f4,text="stop lock",bg=_from_rgb((255, 165, 0)),font=(font_name,"10"),
-                  width=14,bd=3).grid(row = 1, column=2,sticky='w')  
+        self.nolockbutt=tk.Button(self.FlockButt,text="stop lock",bg=_from_rgb((255, 165, 0)),font=(font_name,"10"),
+                  width=14,bd=3,command=self.stoplock)
+        self.nolockbutt.grid(row = 1, column=2,sticky='w')  
         
         # Table For Lock Settings
         tbl4 = tk.Frame(self.Flock,bd=1,bg="white",highlightbackground="grey",highlightthickness=1)
-        tbl4.grid(row=3,column=1,columnspan=3,sticky='nswe')
+        tbl4.grid(row=4,column=1,columnspan=3,sticky='nswe')
         
         # df set
         tk.Label(tbl4,text='\u0394f set (GHz)',font=(font_name,"10"),
@@ -407,15 +647,77 @@ class App(tk.Tk):
         tk.Label(tbl4,text='hysteresis (MHz)',font=(font_name,"10"),
                  bg='white',justify='left',height=1,bd=0,width=18).grid(
                      row=2,column=1,columnspan=1,stick='w')
-        tk.Entry(tbl4,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.hys).grid(
+        tk.Entry(tbl4,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.hys,validatecommand=self.vcmdNum,validate='key').grid(
             row=2,column=2,columnspan=1,sticky='NSEW')  
         
         # step size
         tk.Label(tbl4,text='\u0394V output step (mV)',font=(font_name,"10"),
                  bg='white',justify='left',height=1,bd=0,width=18).grid(
                      row=3,column=1,columnspan=1,stick='w')
-        tk.Entry(tbl4,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dV).grid(
+        tk.Entry(tbl4,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dV,validatecommand=self.vcmdNum,validate='key').grid(
             row = 3, column=2,columnspan=1,sticky='NSEW')  
+        
+    def validNum(self,P):
+        if P.isnumeric():
+            return True
+        else:
+            return False
+
+    def onValidateStart(self, d, i, P, s, S, v, V, W):
+        
+        # valid percent substitutions (from the Tk entry man page)
+        # note: you only have to register the ones you need; this
+        # example registers them all for illustrative purposes
+        #
+        # %d = Type of action (1=insert, 0=delete, -1 for others)
+        # %i = index of char string to be inserted/deleted, or -1
+        # %P = value of the entry if the edit is allowed
+        # %s = value of entry prior to editing
+        # %S = the text string being inserted or deleted, if any
+        # %v = the type of validation that is currently set
+        # %V = the type of validation that triggered the callback
+        #      (key, focusin, focusout, forced)
+        # %W = the tk name of the widget
+
+        if (P.isnumeric()):     
+            try:
+                self.pT1.set_xdata(int(P)*np.array([1, 1]))
+                self.canvas.draw()
+            except:
+                pass
+
+            return True
+
+        else:
+            return False
+        
+    def onValidateEnd(self, d, i, P, s, S, v, V, W):
+        
+        # valid percent substitutions (from the Tk entry man page)
+        # note: you only have to register the ones you need; this
+        # example registers them all for illustrative purposes
+        #
+        # %d = Type of action (1=insert, 0=delete, -1 for others)
+        # %i = index of char string to be inserted/deleted, or -1
+        # %P = value of the entry if the edit is allowed
+        # %s = value of entry prior to editing
+        # %S = the text string being inserted or deleted, if any
+        # %v = the type of validation that is currently set
+        # %V = the type of validation that triggered the callback
+        #      (key, focusin, focusout, forced)
+        # %W = the tk name of the widget
+
+        if (P.isnumeric()):
+            try:
+                self.pT2.set_xdata(int(P)*np.array([1, 1]))
+                self.canvas.draw()
+            except:
+                pass
+            return True
+
+        else:
+            return False
+   
         
     def create_plots(self):
         # Acquisition Label
@@ -429,6 +731,17 @@ class App(tk.Tk):
         self.ax1.set_ylabel("cavity voltage (V)",color='black')
         self.ax1.set_xlabel("time (ms)")
         self.p1, = self.ax1.plot(self.t,self.data1,color='black')
+        
+        self.pdT, = self.ax1.plot(np.array([0,1]),np.array([1000,1000]),color='blue')
+        self.pdT.set_visible(False)
+        
+        self.pFSR, = self.ax1.plot(np.array([0,1]),np.array([1000,1000]),color='red')
+        self.pFSR.set_visible(False)    
+        
+        self.pT1, = self.ax1.plot(np.array([1,1])*int(self.tstart.get()),np.array([0,1300]),color='g',linestyle='dashed')
+        self.pT2, = self.ax1.plot(np.array([1,1])*int(self.tend.get()),np.array([0,1300]),color='g',linestyle='dashed')
+
+        
         self.ax1.tick_params(axis='y', labelcolor='black')
         
         color = 'tab:blue'
@@ -471,7 +784,29 @@ class App(tk.Tk):
         
                 #canvas1.get_tk_widget().pack(side="top",fill='both',expand=True)
                 #canvas1.pack(side="top",fill='both',expand=True)
+             
+    def configLJM(self):
+        ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
+                                ljm.constants.STREAM_SCANS_RETURN_ALL_OR_NONE)
+        ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 30)  
 
+    def configTrig(self):
+        address = ljm.nameToAddress(self.TriggerChannel)[0]
+        ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", address);
+    
+        # Clear any previous settings on triggerName's Extended Feature registers
+        ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 0);
+    
+        # 5 enables a rising or falling edge to trigger stream
+        ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 4);
+        ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 1);
+
+        # Enable
+        ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 1);
+        
+    def configMan(self):
+        ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", 0);
+        
     def connect(self):
         try:
             if self.connectMode.get()==self.connectOptions[0]:
@@ -494,6 +829,12 @@ class App(tk.Tk):
             print('oh no')
             
         if self.isConnected:
+            
+            try:
+                ljm.eStreamStop(self.handle)   
+            except:
+                pass
+
             info = ljm.getHandleInfo(self.handle)
             print("Opened a LabJack with Device type: %i, Connection type: %i,\n"
                   "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" %
@@ -501,11 +842,18 @@ class App(tk.Tk):
             val = ljm.eReadName(self.handle, self.OutputChannel) 
             self.output.set(str(np.round(1000*val,1)))
             self.ConnectStatus.config(text='connected',fg='green')
-            
-            self.configureLJMForTriggeredStream()
-            self.configureDeviceForTriggeredStream()
+
+            ljm.eWriteName(self.handle,'AIN_ALL_NEGATIVE_CH',ljm.constants.GND)
+            ljm.eWriteName(self.handle,'AIN0_RANGE',10)
+            ljm.eWriteName(self.handle,'AIN1_RANGE',10)
+            ljm.eWriteName(self.handle,'STREAM_SETTLING_US',0)
+            ljm.eWriteName(self.handle,'STREAM_RESOLUTION_INDEX',0)
+
             ljm.eWriteName(self.handle, "STREAM_CLOCK_SOURCE", 0)    # Internal clock stream
-            #ljm.eStreamStop(self.handle)   
+            self.b1['state']='disabled'
+            self.b2['state']='normal'
+            self.set_state(self.Foutput,'normal')
+            self.set_state(self.FacqButt,'normal')
 
     def disconnect(self):
         if self.isConnected:
@@ -513,7 +861,12 @@ class App(tk.Tk):
             ljm.close(self.handle)
             self.isConnected = False
             self.ConnectStatus.config(text='disconnected',fg='red')
-            
+            self.b1['state']='normal'
+            self.b2['state']='disabled'
+            self.set_state(self.Foutput,'disabled')
+            self.set_state(self.FacqButt,'disabled')
+            self.set_state(self.FlockButt,'disabled')
+
     def increment(self,inc):
         if self.isConnected:
             oldVal = float(self.output.get())
@@ -532,148 +885,178 @@ class App(tk.Tk):
             
             val = ljm.eReadName(self.handle,self.OutputChannel)
             self.output.set(str(np.round(1000*val,1)))
-            
-    def configureLJMForTriggeredStream(self):
-        ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, ljm.constants.STREAM_SCANS_RETURN_ALL_OR_NONE)
-        ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 0)
 
-    def configureDeviceForTriggeredStream(self):
-        address = ljm.nameToAddress(self.TriggerChannel)[0]
-        ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", address);
-    
-        # Clear any previous settings on triggerName's Extended Feature registers
-        ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 0);
-    
-        # 5 enables a rising or falling edge to trigger stream
-        ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 4);
-        ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 1);
-
-        # Enable
-        ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 1);
         
     def forceacq(self):
-        ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", 0)
-        result = self.burstStream()
-        if result:
-            print('yay')
-            self.updatePlots()
+        self.doAutoAcq = False
+        self.configMan()
+        self.configLJM()      
+        
+        self.forcebutt['state']='disabled'
+        self.acqbutt['state']='disabled'
+        self.set_state(self.acqtbl,'disabled')
+        self.set_state(self.Fpeak,'disabled')
+
+        stream_thread = stream(self.handle)        
+        stream_thread.numscans=int(self.numscans.get())
+        stream_thread.scanrate=int(self.scanrate.get())
+        stream_thread.scansperread=int(self.scansperread.get())
+        stream_thread.InputChannels = self.InputChannels
+        stream_thread.TriggerChannel = self.TriggerChannel
+        stream_thread.delay=int(self.delay.get())
+        
+        stream_thread.start()
+        self.process_stream(stream_thread)         
+        
+    def startacq(self):
+        self.doAutoAcq = True
+        self.configTrig()
+        self.configLJM()              
+        self.forcebutt['state']='disabled'
+        self.acqbutt['state']='disabled'  
+        
+        self.set_state(self.acqtbl,'disabled')
+        self.set_state(self.Fpeak,'disabled')
+
+        self.dolockbutt['state']='normal'
+        self.doTrigAcq()
+        
+    def doTrigAcq(self):        
+        # Initialize Stream object
+        stream_thread = stream(self.handle)            
+        stream_thread.numscans=int(self.numscans.get())
+        stream_thread.scanrate=int(self.scanrate.get())
+        stream_thread.scansperread=int(self.scansperread.get())
+        stream_thread.InputChannels = self.InputChannels
+        stream_thread.TriggerChannel = self.TriggerChannel                 
+        stream_thread.delay=int(self.delay.get())
+
+        # Wait until trigger level is appropriate
+        tLevel = 0;
+        timeout = 1
+        t0 = time.time()
+        while (tLevel == 0):
+            tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
+            if ((time.time()-t0)>timeout):
+                tLevel=1
+            time.sleep(0.01)          
+        
+        stream_thread.start()
+        self.process_stream(stream_thread)  
             
-    def updatePlots(self):
-        self.p1.set_data(self.t,self.data[:,0])
-        
-        """
-        lbl2.config(text="Updating data plot objects ...",bg="yellow")
-        print("Updating data plot objects ... ")
-        global PLOTDATA
-        
-        global PLOTTIME 
-        ax1.set_xlim(0,np.amax(tVec))
-        #ax2.set_xlim(0,np.amax(tVec))
-        for j in range(len(names)):
-            plotsData[j].set_data(tVec,data[:,j])
-        PLOTDATA=data
-        PLOTTIME=tVec
-        
-        plotsData.append(ax1.plot([],[],color=myc[j % len(myc)],linestyle='dashed',linewidth=2)[0])
-        plotsData[j].set_dashes(myd[j // len(myc)])
-        """
-        
-        
-    def burstStream(self):
-        
-        # Scan list addresses for streamBurst    
-        nAddr = len(self.InputChannels)
-        aScanList = ljm.namesToAddresses(nAddr, self.InputChannels)[0]   
-        
-        # Get the scan rate (Hz) and number of total samples    
-        scanrate=float(self.scanrate.get())
-        numscans=int(self.numscans.get())
-        scansperread=int(self.scansperread.get()) 
-        Tacquire = numscans/scanrate
-        samplerate = scanrate*nAddr
-        
-        # Display acquisition settings
-        #print("\n " + "Scan rate".ljust(20) + ": %s Hz" % scanrate)
-        #print(" " + "Number of Scans".ljust(20) + ": %s" % numscans)
-        #print(" " + "Total Duration".ljust(20) + ": %s sec" % Tacquire) 
-        #print(" " + "Scans per read".ljust(20) + ": %s" % scansperread) 
-        #print(" " + "Number of Channels".ljust(20) + ": %s" % nAddr)
-        #print(" " + "Total Sample rate".ljust(20) + ": %s Hz" % samplerate)    
-        
-        # Initilize Counters
-        totScans = 0            # Total scans read
-        totSkip = 0             # Total skipped samples
-        i = 1                   # Number of reads
-        ljmScanBacklog = 0      # Backlog on the LJM
-        dataAll=[]              # All data
-        isGood=True
-        
-        
-     #   long long time0 = LJM_GetHostTick();
-   # err = LJM_eReadName(handle, "SERIAL_NUMBER", &value);
-    #long long time1 = LJM_GetHostTick();
+    def stopacq(self):
+        self.doAutoAcq = False
+        self.set_state(self.FlockButt,'disabled')
 
+        self.doLock = False
+        
+    def startlock(self):
+        self.doLock = True            
+        self.dolockbutt['state']='disabled'
+        self.nolockbutt['state']='normal'
+    def stoplock(self):
+        self.doLock = False
+        self.dolockbutt['state']='normal'
+        self.nolockbutt['state']='disabled'
 
-        # Configure and start stream
-        scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)    
-
-
-        while (totScans < numscans) & isGood:
-
-            ljm_stream_util.variableStreamSleep(scansperread, scanrate, ljmScanBacklog)
-            try:
-
-                ret = ljm.eStreamRead(self.handle) # read data in buffer
-
-                # Recrod the data
-                aData = ret[0]
-                ljmScanBacklog = ret[2]
-                scans = len(aData) / nAddr
-                totScans += scans 
-                dataAll+=aData                
-             
-                # -9999 values are skipped ones
-                curSkip = aData.count(-9999.0)
-                totSkip += curSkip    
-                
-                #print("eStreamRead %i : %i scans, %0.0f scans skipped, %i device backlog, %i in LJM backlog" % (i,totScans, curSkip/nAddr, ret[1], ljmScanBacklog))
-
-                # Increment read counter    
-                i += 1
-                # do stuff
-
-            except ljm.LJMError as err:
-                if err.errorCode == ljm.errorcodes.NO_SCANS_RETURNED:     
-                    sys.stdout.flush()
-                    continue
-                else: 
-                    ljme = sys.exc_info()[1]
-                    print(ljme)
-                    isGood=False  
-
-          
-        tAcq = time.strftime('%Y-%m-%d_%H-%M-%S') 
-
-        try:
-            ljm.eStreamStop(self.handle)   
-        except ljm.LJMError:
-            ljme = sys.exc_info()[1]
-            print(ljme)
-        except Exception:
-            e = sys.exc_info()[1]
-            print(e)    
+    def update(self): 
+        
+        lorentz = lambda t,c,g: 1/(((t-c)/g)**2+1)
+        
+        ya1 = 800*lorentz(self.t,70,.5)        
+        ya2 = 810*lorentz(self.t,105,.5)  
+        ya3 = 800*lorentz(self.t,175,.5)        
+        ya4 = 810*lorentz(self.t,245,.5)  
+        
+        yb1 = 1280*lorentz(self.t,10,.5)
+        yb2 = 1280*lorentz(self.t,80,.5)
+        yb3 = 1300*lorentz(self.t,115,.5)        
+        yb4 = 1280*lorentz(self.t,185,.5)
+        yb5 = 1280*lorentz(self.t,255,.5)
+  
+        y = ya1+ya2+ya3+ya4+yb1+yb2+yb3+yb4+yb5
+        r = 1000*self.t/np.max(self.t)
+        
+        self.p1.set_data(self.t,y)
+        self.p2.set_data(self.t,r)
+        self.ax1.set_xlim(0,np.amax(self.t))
+        self.ax1.set_ylim(0,1400)
+        self.ax2.set_ylim(0,1200)
+        
+        if int(self.tstart.get())<int(self.tend.get()):
+            t = self.t
+            y = y            
             
-        if isGood:       
-            tVec = (np.array([range(numscans)]).T)/scanrate
-            data = np.zeros((numscans,nAddr))
-            data=np.array(dataAll).reshape(numscans,nAddr)            
-            self.t = tVec
-            self.data = data
-            self.lastacquisition = tAcq
-            if totSkip>0:
-                print(totSkip)
+            i1 = t >= int(self.tstart.get())
+            i2 = t <= int(self.tend.get())            
+            i = i1 & i2            
+            y = y[i]
+            t = t[i]
+    
+            peaks=scipy.signal.find_peaks(y, height=None, threshold=None, 
+                                    distance=None, prominence=0.5, width=None, 
+                                    wlen=None, rel_height=0.5, plateau_size=None)            
+            yP = y[peaks[0]]
+            tP = t[peaks[0]]
+            
+            # Sort in ascending order
+            i = np.argsort(yP)        
+            yP = yP[i]
+            tP = tP[i]
+            
+            # Process the peaks if there are four of them
+            if tP.size == 4:
+                # Get the two biggest peaks and sort by time
+                TpA = tP[2:4]
+                yA = yP[2:4]            
+                iA = np.argsort(TpA)
+                TpA = TpA[iA]
+                yA = yA[iA]            
+    
+                # Get teh two smallest peaks and sort by time
+                TpB = tP[0:2]
+                yB = yP[0:2]            
+                iB = np.argsort(TpB)
+                TpB = TpB[iB]
+                yB = yB[iB] 
                 
-        return isGood   
+                # Calculate the FSR            
+                FSR_A = abs(TpA[0]-TpA[1])
+                FSR_B = abs(TpB[0]-TpB[1])
+                
+                # Calculate the time separation
+                dT = TpB[0]-TpA[0]                
+                dF = float(self.FSR.get())*dT/FSR_A
+    
+                self.dT.set(str(dT))
+                self.FSRtime.set(str(FSR_A))
+                self.dF.set(str(round(dF,1)))
+                
+                self.pdT.set_data([TpB[0], TpA[0]],np.mean([yA[0],yB[0]])*np.array([1,1]))
+                self.pdT.set_visible(True)
+                
+                self.pFSR.set_data(TpA,np.mean(yA)*np.array([1,1]))
+                self.pFSR.set_visible(True)
+                
+                if self.doLock:
+                    dFset = int(self.dFset.get())  
+                    hys = int(self.hys.get())                
+                    err = dF - dFset                       
+                    dV = int(self.dV.get())
+                                    
+                    if err>0 & abs(err)<hys:
+                        self.increment(dV)                    
+                    if err<0 & abs(err)<hys:
+                        self.increment(-dV)                    
+            else:
+                self.pdT.set_visible(False)
+                self.pFSR.set_visible(False)     
+            self.canvas.draw()       
+        
+
+        
+    def updateLock(self):
+        print('i am locking')        
       
     def on_closing(self):
         self.disconnect()
@@ -712,8 +1095,8 @@ root1 = tk.Tk()
 window2(root1)
 root1.mainloop()
 """
-#%% Main Loop
 
+#%% Main Loop
 
 if __name__ == "__main__":
      app = App()

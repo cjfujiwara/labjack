@@ -28,6 +28,7 @@ npt = struct;
 
 % Labckjack default ip address
 npt.myip            = '192.168.1.124';
+npt.myip            = '192.168.0.177';
 
 % Labjack handle is empty by default
 npt.handle          = 0;
@@ -380,6 +381,7 @@ tAcq.Position(1:2)  = [2 hb_stopAcq.Position(2) - 90];
     function force(~,~)
         disp([datestr(now,13) ' Forcing acquisition.']);
         npt=configureStream(npt);
+
         grabData
     end
 
@@ -675,6 +677,8 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
         
         tic;
         tStatus.String = [tStatus.String ' streaming ...' ];
+        LabJack.LJM.eWriteName(npt.handle, 'STREAM_TRIGGER_INDEX', 0);
+
         [yNew,isGood] = performStream;
         
         if isGood
@@ -904,7 +908,7 @@ function [Y_ALL,isGood] = performStream
     end
     t2=toc;
 %     tStatus.String = [' trigger wait ' num2str(round(1e3*t2,1)) ' ms'];
-        
+
     % Begin the Stream
     [ljm_err, npt.scanRate] = LabJack.LJM.eStreamStart(npt.handle, int32(npt.scansPerRead), ...
         int32(npt.numAddresses), npt.aScanList, int32(npt.scanRate));
@@ -913,13 +917,16 @@ function [Y_ALL,isGood] = performStream
     end
     
     tic;
+    t1=now;
     pause(sleepTime + 0.01); 
+    
     while (totScans < npt.numScans) && isGood                     
         try
             % Read data in buffer
+            
             [~, devScanBL, ljmScanBL] = LabJack.LJM.eStreamRead( ...
                 npt.handle, npt.aData, 0, 0);
-            
+            toc
             % Update scans
             totScans = totScans+npt.scansPerRead;
 
@@ -957,6 +964,8 @@ function [Y_ALL,isGood] = performStream
             end
         end         
     end
+    tc=now;
+    disp((tc-t1)*24*60*60)
     
     if isGood        
         try
@@ -995,6 +1004,8 @@ function npt = connect(npt)
         npt.isConnected = 1;
         showDeviceInfo(npt.handle);  
         updateLabel(npt);
+    catch ME
+        
     end
 end
 

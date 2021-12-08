@@ -154,7 +154,7 @@ tnow=datetime.now()
 def openLabJack():
    
     print("Opening labjack on ..."+myip)
-    handle=ljm.openS("T7","USB",'470026765')
+    handle=ljm.openS("T7","ETHERNET",'470026765')
     #handle=ljm.openS("T7","ETHERNET", myip)# Connect via ip address (faster)
     
     # Try to close stream in case it is running
@@ -396,6 +396,9 @@ def configureDeviceForTriggeredStream(handle, triggerName):
 
     # Enable
     ljm.eWriteName(handle, "%s_EF_ENABLE" % triggerName, 1);
+    
+    
+    
     
     
 # I DONT UNDERSTAND WHAT THIS FUNCTION DOES

@@ -50,8 +50,8 @@ npt.scanRate        = 20e3;         % Data sampling rate [Hz]
 npt.numScans        = 5500;         % Number of scans to take 
 npt.scansPerRead    = npt.numScans; % Scan per read
 
-npt.delay           = 0.1;          % Delay time between acquisitions [s]
-npt.timeout         = 1;            % Timeout before stream is aborted [s]
+npt.delay           = 0.5;          % Delay time between acquisitions [s]
+npt.timeout         = 3;            % Timeout before stream is aborted [s]
 
 % Default lock set point 
 npt.dfSet           = -.140;        % [GHz]
@@ -100,7 +100,6 @@ set(hF,'Color','w','units','pixels','Name',guiname,...
     'toolbar','figure','Tag','GUI','CloseRequestFcn',@closeGUI,...
     'NumberTitle','off','Position',[50 50 800 500],...
     'SizeChangedFcn',@figResize);
-
 
 % Callback for when the GUI is requested to be closed.
     function closeGUI(fig,~)
@@ -688,7 +687,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
         else
             t2=toc;
             tStatus.String = ['ERROR (' num2str(round(t2,3)) ' s)'];
-            warning('error on data capture'); 
+%             warning([datestr(now,13) ' error on data capture']); 
         end
         
         
@@ -726,7 +725,10 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
            
         % Update internal recording of voltage
         npt.OUT_VALUE = value;        
-        tOut.Data = value;   
+        
+        if value~=tOut.Data
+            tOut.Data = value;   
+        end
         
         % Update if you find four peaks
         if length(yPeak) == 4            
@@ -885,6 +887,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
 
 
 function [Y_ALL,isGood] = performStream
+    % Acquisition start time
     tStart = now;
     
     % Time for each read
@@ -898,7 +901,7 @@ function [Y_ALL,isGood] = performStream
     isGood = 1;    
     Y_ALL=[];
 
-    % Wait until trigger is low
+    % Wait until trigger is low to send stream request
     tLevel = 0;
     tic
     while tLevel == 0
@@ -907,7 +910,6 @@ function [Y_ALL,isGood] = performStream
         pause(0.01);        
     end
     t2=toc;
-%     tStatus.String = [' trigger wait ' num2str(round(1e3*t2,1)) ' ms'];
 
     % Begin the Stream
     [ljm_err, npt.scanRate] = LabJack.LJM.eStreamStart(npt.handle, int32(npt.scansPerRead), ...
@@ -917,7 +919,7 @@ function [Y_ALL,isGood] = performStream
     end
     
     tic;
-    t1=now;
+
     pause(sleepTime + 0.01); 
     
     while (totScans < npt.numScans) && isGood                     
@@ -950,13 +952,15 @@ function [Y_ALL,isGood] = performStream
                     'NO_SCANS_RETURNED')                
                 t3 = toc;
                 if t3>npt.timeout
-                    warning(' Timeout exceeded.');                        
+                    warning([datestr(now,13) ' Timeout exceeded.']);                        
                     npt=disconnect(npt);
-                    npt=connect(npt);
+                    npt.isConnected = 0;                    
+                    while npt.isConnected == 0
+                        pause(0.5);
+                        disp([datestr(now,13) ' Reconnecting']);
+                        npt=connect(npt);
+                    end                    
                     npt=configureStream(npt);
-                    try
-                        LabJack.LJM.eStreamStop(npt.handle);
-                    end
                     isGood = 0;
                 end  
             else
@@ -991,26 +995,54 @@ end
 
 
 function npt = connect(npt)
+    npt.isConnected = 0;
+        % USB
+%         [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'USB', 'ANY', npt.handle);        
+    value = 1;  
+    % Attempt connection
     try
         % Ethernet Connect
         fprintf([datestr(now,13) ' Connecting to labjack ... ']);
-        [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'ETHERNET', npt.myip, npt.handle);        
-% USB
-%         [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'USB', 'ANY', npt.handle);        
-        disp( ' done');
-        try
-            [ljmError] = LabJack.LJM.eStreamStop(npt.handle);
-        end
-        npt.isConnected = 1;
-        showDeviceInfo(npt.handle);  
-        updateLabel(npt);
+        [ljmError, npt.handle] = LabJack.LJM.OpenS('T7', 'ETHERNET', ...
+            npt.myip, npt.handle);        
     catch ME
-        
+       warning(ME.message)
+       disp('error');
+       return;
     end
+    disp('done');
+    
+    if ~isequal(char(ljmError),'NOERROR')
+        warning('Connection error');
+        return;
+    end
+
+    npt.isConnected = 1;
+    showDeviceInfo(npt.handle);  
+    updateLabel(npt);        
+ 
+    % Read stream status
+    try
+        [ljmError, value] = LabJack.LJM.eReadName(npt.handle, ...
+            'STREAM_ENABLE',0);        
+    catch ME
+        warning(ME.message);
+    end
+    
+    % Stop the stream if it is running
+    if ~isequal(char(ljmError),'NOERROR') && value
+        try
+            disp('stopping stream');
+           [ljmError] = LabJack.LJM.eStreamStop(npt.handle);
+        catch ME
+            warning(ME.message);
+        end
+     
+    end    
 end
 
 function npt=disconnect(npt)
-    disp('Disconnecting');
+    disp([datestr(now,13) ' Disconnecting']);
     LabJack.LJM.Close(npt.handle);
     npt.handle=0;
     npt.isConnected = 0;
@@ -1070,14 +1102,13 @@ end
 function npt = configureStream(npt)
     % Configure the strea
     T = npt.numScans * npt.numAddresses /npt.scanRate;
-
-    disp(['nScan=' num2str(npt.numScans) ',' ...
+    disp([datestr(now,13) 'Configuring data stream ...']);
+    disp([' nScan=' num2str(npt.numScans) ',' ...
         'nAddr=' num2str(npt.numAddresses) ',' ...
         'rScan=' num2str(npt.scanRate) ' Hz,' ...
         'scansperRead= ' num2str(npt.scansPerRead) ...
         ' ==> ' num2str(round(T,1)) ' seconds']);
     t1 = now;
-    fprintf('Configuring data stream ...');
 
     % Scan list names to stream.
     aScanListNames = NET.createArray('System.String', npt.numAddresses);    
@@ -1125,8 +1156,7 @@ function npt = configureStream(npt)
     LabJack.LJM.eWriteNames(npt.handle, numFrames, aNames, aValues, -1);
     
     t2 = now;
-    disp([' done (' num2str(round((t2-t1)*60*60*24,3)) 's)']);
-
+    disp([' data stream configured (' num2str(round((t2-t1)*60*60*24,3)) 's)']);
 end
 
 

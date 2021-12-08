@@ -28,7 +28,7 @@ npt = struct;
 
 % Labckjack default ip address
 npt.myip            = '192.168.1.124';
-npt.myip            = '192.168.0.177';
+% npt.myip            = '192.168.0.177';
 
 % Labjack handle is empty by default
 npt.handle          = 0;
@@ -676,7 +676,7 @@ timer_labjack=timer('name','Labjack Cavity Timer','Period',npt.delay,...
         
         tic;
         tStatus.String = [tStatus.String ' streaming ...' ];
-        LabJack.LJM.eWriteName(npt.handle, 'STREAM_TRIGGER_INDEX', 0);
+%         LabJack.LJM.eWriteName(npt.handle, 'STREAM_TRIGGER_INDEX', 0);
 
         [yNew,isGood] = performStream;
         
@@ -928,7 +928,7 @@ function [Y_ALL,isGood] = performStream
             
             [~, devScanBL, ljmScanBL] = LabJack.LJM.eStreamRead( ...
                 npt.handle, npt.aData, 0, 0);
-            toc
+%             toc
             % Update scans
             totScans = totScans+npt.scansPerRead;
 
@@ -969,7 +969,7 @@ function [Y_ALL,isGood] = performStream
         end         
     end
     tc=now;
-    disp((tc-t1)*24*60*60)
+%     disp((tc-t1)*24*60*60)
     
     if isGood        
         try

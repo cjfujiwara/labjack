@@ -71,7 +71,9 @@ class stream(Thread):
         
         # Data
         self.t                  = None
-        self.data               = None
+        self.y1                  = None
+        self.y2                  = None
+
         self.lastacquisition    = None 
         
         self.delay              = None
@@ -181,10 +183,16 @@ class stream(Thread):
             data = np.zeros((numscans,nAddr))
             data = np.array(dataAll).reshape(numscans,nAddr)   
 
-            
             # Convert data to mV and ms
             self.t = 1000*tVec
-            self.data = 1000*data
+            self.y1 = 1000*data[:,0]
+            self.y2 = 1000*data[:,1]
+
+            print(self.t.shape)
+            print(self.y1.shape)
+            print(self.y2.shape)
+
+
             self.lastacquisition = tAcq
             self.lastacq = time.time()
             if totSkip>0:
@@ -243,10 +251,9 @@ class App(tk.Tk):
         self.hys = tk.StringVar(self)           # T end
         self.dV = tk.StringVar(self)            # Minimum Peak Height  
         
-        self.t = np.arange(0.01, 10.0, 0.01)
-        self.data1 = np.exp(self.t)
-        self.data2 = np.sin(2 * np.pi * self.t)
-        self.data3 = self.t        
+        self.t = np.linspace(0, 300, 301)
+        self.y1 = np.exp(-self.t)
+        self.y2 = np.sin(2 * np.pi * self.t/50)
                 
         self.doAutoAcq = False
         self.doLock = False
@@ -278,7 +285,8 @@ class App(tk.Tk):
                 
             if thread.goodStream:
                 self.t = thread.t
-                self.data = thread.data
+                self.y1 = thread.y1
+                self.y2 = thread.y2
                 self.lastAcquisition = thread.lastacquisition                
                 self.update()
                 
@@ -737,7 +745,8 @@ class App(tk.Tk):
         self.ax1 = self.fig.add_subplot(gs[:-1, :])
         self.ax1.set_ylabel("cavity voltage (V)",color='black')
         self.ax1.set_xlabel("time (ms)")
-        self.p1, = self.ax1.plot(self.t,self.data1,color='black')
+        self.p1, = self.ax1.plot(self.t,self.y1,color='black')
+        self.ax1.set_xlim([0,300])
         
         self.pdT, = self.ax1.plot(np.array([0,1]),np.array([1000,1000]),color='blue')
         self.pdT.set_visible(False)
@@ -758,7 +767,7 @@ class App(tk.Tk):
         self.ax2 = self.ax1.twinx()  # instantiate a second axes that shares the same x-axis
         color = 'tab:red'
         self.ax2.set_ylabel('cavity ramp (V)', color=color)  # we already handled the x-label with ax1
-        self.p2,=self.ax2.plot(self.t, self.data2, color=color)
+        self.p2,=self.ax2.plot(self.t, self.y2, color=color)
         self.ax2.tick_params(axis='y', labelcolor=color)
         
         self.ax3 = self.fig.add_subplot(gs[-1, :])
@@ -974,31 +983,32 @@ class App(tk.Tk):
 
     def update(self): 
         
-        lorentz = lambda t,c,g: 1/(((t-c)/g)**2+1)
+        #lorentz = lambda t,c,g: 1/(((t-c)/g)**2+1)
         
-        ya1 = 800*lorentz(self.t,70,.5)        
-        ya2 = 810*lorentz(self.t,105,.5)  
-        ya3 = 800*lorentz(self.t,175,.5)        
-        ya4 = 810*lorentz(self.t,245,.5)  
+        #ya1 = 800*lorentz(self.t,70,.5)        
+        #ya2 = 810*lorentz(self.t,105,.5)  
+        #ya3 = 800*lorentz(self.t,175,.5)        
+        #ya4 = 810*lorentz(self.t,245,.5)  
         
-        yb1 = 1280*lorentz(self.t,10,.5)
-        yb2 = 1280*lorentz(self.t,80,.5)
-        yb3 = 1300*lorentz(self.t,115,.5)        
-        yb4 = 1280*lorentz(self.t,185,.5)
-        yb5 = 1280*lorentz(self.t,255,.5)
+        #yb1 = 1280*lorentz(self.t,10,.5)
+        #yb2 = 1280*lorentz(self.t,80,.5)
+        #yb3 = 1300*lorentz(self.t,115,.5)        
+        #yb4 = 1280*lorentz(self.t,185,.5)
+        #yb5 = 1280*lorentz(self.t,255,.5)
   
-        y = ya1+ya2+ya3+ya4+yb1+yb2+yb3+yb4+yb5
-        r = 1000*self.t/np.max(self.t)
+        #y = ya1+ya2+ya3+ya4+yb1+yb2+yb3+yb4+yb5
+        #r = 1000*self.t/np.max(self.t)
         
-        self.p1.set_data(self.t,y)
-        self.p2.set_data(self.t,r)
+        self.p1.set_data(self.t,self.y1)
+        self.p2.set_data(self.t,self.y2)
+        
         self.ax1.set_xlim(0,np.amax(self.t))
         self.ax1.set_ylim(0,1400)
-        self.ax2.set_ylim(0,1200)
+        self.ax2.set_ylim(0,1200)        
         
         if int(self.tstart.get())<int(self.tend.get()):
             t = self.t
-            y = y            
+            y = self.y1 
             
             i1 = t >= int(self.tstart.get())
             i2 = t <= int(self.tend.get())            
@@ -1085,9 +1095,9 @@ class App(tk.Tk):
                         self.increment(-dV)                    
             else:
                 self.pdT.set_visible(False)
-                self.pFSR.set_visible(False)     
-            self.canvas.draw()       
-
+                self.pFSR.set_visible(False)    
+            self.canvas.draw()   
+            
     def on_closing(self):
         self.disconnect()
         self.destroy()

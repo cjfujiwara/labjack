@@ -31,6 +31,7 @@ from labjack import ljm
 import time
 from threading import Thread
 import queue
+from matplotlib.dates import DateFormatter
 
 import ljm_stream_util
 import code
@@ -171,7 +172,7 @@ class stream(Thread):
             print(e)                
         if self.goodStream:  
             t3=time.time()
-            print(t3-t2)
+            #print(t3-t2)
             #self.AcqStatus.config(text='processing ...',fg='green')
             #self.AcqStatus.update()
             
@@ -185,6 +186,7 @@ class stream(Thread):
             self.t = 1000*tVec
             self.data = 1000*data
             self.lastacquisition = tAcq
+            self.lastacq = time.time()
             if totSkip>0:
                 print("lost frames : " + str(totSkip))
         else:
@@ -248,6 +250,11 @@ class App(tk.Tk):
                 
         self.doAutoAcq = False
         self.doLock = False
+        
+        self.tHis=[]
+        self.vHis=[]
+        self.nHis=100
+        self.dfHis=[]
         
         self.defaultSettings()        
         self.create_frames()        
@@ -725,7 +732,7 @@ class App(tk.Tk):
                  bg='white',justify='left',height=1,bd=0).pack(side='top',anchor='nw')                    
 
         self.fig = Figure()
-        
+        self.fig.autofmt_xdate()
         gs = GridSpec(3, 1, figure=self.fig)        
         self.ax1 = self.fig.add_subplot(gs[:-1, :])
         self.ax1.set_ylabel("cavity voltage (V)",color='black')
@@ -740,9 +747,12 @@ class App(tk.Tk):
         
         self.pT1, = self.ax1.plot(np.array([1,1])*int(self.tstart.get()),np.array([0,1300]),color='g',linestyle='dashed')
         self.pT2, = self.ax1.plot(np.array([1,1])*int(self.tend.get()),np.array([0,1300]),color='g',linestyle='dashed')
-
+       
+        self.ax1.tick_params(axis='y', labelcolor='black')        
         
-        self.ax1.tick_params(axis='y', labelcolor='black')
+        tHisFake = [datetime.datetime.now()-datetime.timedelta(1e-4), datetime.datetime.now()]
+        dfFake = [0, 0]
+        vFake = [1.25, 1.25]        
         
         color = 'tab:blue'
         self.ax2 = self.ax1.twinx()  # instantiate a second axes that shares the same x-axis
@@ -752,16 +762,19 @@ class App(tk.Tk):
         self.ax2.tick_params(axis='y', labelcolor=color)
         
         self.ax3 = self.fig.add_subplot(gs[-1, :])
-        self.p3,=self.ax3.plot(self.t, self.t, color='black')
+        self.p3,=self.ax3.plot(tHisFake, dfFake, color='black')
         self.ax3.set_ylabel(r"$\Delta f~\mathrm{measure}~(\mathrm{GHz})$")
         self.ax3.set_xlabel("time")
+        myFmt = DateFormatter('%H:%M:%S')
+        self.ax3.xaxis.set_major_formatter(myFmt)
         
         color = 'tab:blue'
         self.ax4 = self.ax3.twinx()  # instantiate a second axes that shares the same x-axis
         self.ax4.set_ylabel('output (V)', color=color)  # we already handled the x-label with ax1
-        self.p4,=self.ax4.plot(self.t,self.data2, color=color)
+        self.p4,=self.ax4.plot(tHisFake,vFake, color=color)
         self.ax4.tick_params(axis='y', labelcolor=color)
-        
+        self.ax4.xaxis.set_major_formatter(myFmt)
+
         self.fig.tight_layout()
         
         
@@ -1038,6 +1051,28 @@ class App(tk.Tk):
                 self.pFSR.set_data(TpA,np.mean(yA)*np.array([1,1]))
                 self.pFSR.set_visible(True)
                 
+                # Update the history
+                
+                tNow = datetime.datetime.now()
+                
+                if len(self.tHis) == self.nHis:
+                    self.tHis.pop()
+                    self.dfHis.pop()
+                    self.vHis.pop()
+                
+                self.tHis.append(tNow)
+                self.dfHis.append(dF)
+                self.vHis.append(float(self.output.get())) 
+                
+                self.p3.set_data(self.tHis,self.dfHis)
+                self.p4.set_data(self.tHis,self.vHis)
+                
+                self.ax3.set_ylim(np.min(self.dfHis)-10,np.max(self.dfHis)+10)
+                self.ax4.set_ylim(np.min(self.vHis)-10,np.max(self.vHis)+10)                
+                
+                self.ax3.set_xlim(self.tHis[0]-datetime.timedelta(seconds=5),
+                                  self.tHis[-1]+datetime.timedelta(seconds=5))
+                
                 if self.doLock:
                     dFset = int(self.dFset.get())  
                     hys = int(self.hys.get())                
@@ -1052,12 +1087,7 @@ class App(tk.Tk):
                 self.pdT.set_visible(False)
                 self.pFSR.set_visible(False)     
             self.canvas.draw()       
-        
 
-        
-    def updateLock(self):
-        print('i am locking')        
-      
     def on_closing(self):
         self.disconnect()
         self.destroy()

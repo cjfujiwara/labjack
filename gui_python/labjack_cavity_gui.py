@@ -948,8 +948,11 @@ class App(tk.Tk):
         
     def startacq(self):
         self.doAutoAcq = True
+        t1=time.time()
         self.configTrig()
         self.configLJM()              
+        t2=time.time()
+        print(t2-t1)
         self.forcebutt['state']='disabled'
         self.acqbutt['state']='disabled'  
         
@@ -961,6 +964,9 @@ class App(tk.Tk):
         
     def doTrigAcq(self):        
         # Initialize Stream object
+        self.configTrig()
+        self.configLJM()   
+        
         stream_thread = stream(self.handle)            
         stream_thread.numscans=int(self.numscans.get())
         stream_thread.scanrate=int(self.scanrate.get())

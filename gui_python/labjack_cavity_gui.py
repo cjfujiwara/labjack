@@ -67,7 +67,8 @@ class stream(Thread):
 
         # Read Channels
         self.InputChannels      = None
-        self.TriggerChannel     = None        
+        self.TriggerChannel     = None       
+        self.AcqStatus          = None
         
         # Data
         self.t                  = None
@@ -79,16 +80,18 @@ class stream(Thread):
         self.delay              = None
        
     def run(self):
-        #self.AcqStatus.config(text='acquiring ... ',fg='green')
-        #self.AcqStatus.update()  
+        self.AcqStatus.config(text='acquiring ... ',fg='green')
+        self.AcqStatus.update()  
         
-        self.Status = 'delaying ...'
-        self.StatusColor = 'red'
+        #self.AcqStatus.config(text='delaying ...',fg='red')
+        #self.AcqStatus.update()
         #time.sleep(self.delay/1000)
             
         
-        self.Status = 'initializing acquisition'
-        self.StatusColor = 'red'
+#        self.Status = 'initializing acquisition'
+ #       self.StatusColor = 'red'
+        #self.AcqStatus.config(text='initializing acquisition ...',fg='red')
+        #self.AcqStatus.update()
         
         # Scan list addresses for streamBurst    
         nAddr = len(self.InputChannels)
@@ -125,8 +128,9 @@ class stream(Thread):
         t0 = time.time()
         while (tLevel == 0):
             tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
-            if ((time.time()-t0)>timeout):
+            if tLevel==1:
                 print('trig detected')
+            if ((time.time()-t0)>timeout):
                 tLevel=1
             time.sleep(0.01)     
 
@@ -134,8 +138,12 @@ class stream(Thread):
         scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)   
         t2 = time.time()
         time.sleep(sleepTime + 0.01)
-        self.Status = 'acquiring ...'
-        self.StatusColor ='green'
+        #self.Status = 'acquiring ...'
+        #self.StatusColor ='green'
+        
+        #self.AcqStatus.config(text='acquiring ...',fg='green')
+        ##elf.AcqStatus.update()
+        
         while (totScans < numscans) & self.goodStream:
             try:                
                 ret = ljm.eStreamRead(self.handle) # read data in buffer
@@ -161,8 +169,12 @@ class stream(Thread):
             except ljm.LJMError as err:
                 if err.errorCode == ljm.errorcodes.NO_SCANS_RETURNED:  
                     if ((time.time()-t2)-Tacquire)>2:
-                        self.Status = 'acquisition timeout'
-                        self.StatusColor ='red'
+                        #self.Status = 'acquisition timeout'
+                        #self.StatusColor ='red'
+                        
+                        #self.AcqStatus.config(text='acquisition timeout',fg='red')
+                        #self.AcqStatus.update()
+                        
 
                         #self.AcqStatus.config(text='ACQUISITION TIMEOUT',fg='red')
                         #self.AcqStatus.update()
@@ -189,7 +201,9 @@ class stream(Thread):
             #print(t3-t2)
             #self.AcqStatus.config(text='processing ...',fg='green')
             #self.AcqStatus.update()
-            
+
+            self.AcqStatus.config(text='processing stream ... ',fg='green')
+            self.AcqStatus.update()            
             #tVec = (np.array([range(numscans)]).T)/scanrate
             tVec = np.linspace(0,numscans-1,numscans)/scanrate
             data = np.zeros((numscans,nAddr))
@@ -284,9 +298,9 @@ class App(tk.Tk):
     def process_stream(self, thread):
         if thread.is_alive():
             # check the thread every 100ms
-            self.after(100, lambda: self.process_stream(thread))
-            self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
-            self.AcqStatus.update()   
+            self.after(1000, lambda: self.process_stream(thread))
+            #self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
+            #self.AcqStatus.update()   
         else:
             self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
                 
@@ -300,12 +314,13 @@ class App(tk.Tk):
             if self.doAutoAcq:    
                 #pass
                 #self.doTrigAcq()
-                self.forcebutt['state']='normal'
-                self.acqbutt['state']='normal' 
-                self.set_state(self.acqtbl,'normal')
-                self.set_state(self.Fpeak,'normal')
+                #self.forcebutt['state']='normal'
+                #self.acqbutt['state']='normal' 
+                #self.set_state(self.acqtbl,'normal')
+                #self.set_state(self.Fpeak,'normal')
                 
-                #self.after(int(self.delay.get()),self.doTrigAcq())
+                self.after(int(self.delay.get()),self.startacq())
+                #self.doTrigAcq()
             else:
                 self.forcebutt['state']='normal'
                 self.acqbutt['state']='normal' 
@@ -942,7 +957,8 @@ class App(tk.Tk):
         stream_thread.InputChannels = self.InputChannels
         stream_thread.TriggerChannel = self.TriggerChannel
         stream_thread.delay=int(self.delay.get())
-        
+        stream_thread.AcqStatus=self.AcqStatus        
+
         stream_thread.start()
         self.process_stream(stream_thread)         
         
@@ -974,7 +990,8 @@ class App(tk.Tk):
         stream_thread.InputChannels = self.InputChannels
         stream_thread.TriggerChannel = self.TriggerChannel                 
         stream_thread.delay=int(self.delay.get())        
-        
+        stream_thread.AcqStatus=self.AcqStatus        
+
         stream_thread.start()
         self.process_stream(stream_thread)  
             
@@ -1021,6 +1038,8 @@ class App(tk.Tk):
         if int(self.tstart.get())<int(self.tend.get()):
             t = self.t
             y = self.y1 
+            
+            print(t)
             
             i1 = t >= int(self.tstart.get())
             i2 = t <= int(self.tend.get())            

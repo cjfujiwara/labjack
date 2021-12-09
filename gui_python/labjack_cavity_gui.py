@@ -84,7 +84,7 @@ class stream(Thread):
         
         self.Status = 'delaying ...'
         self.StatusColor = 'red'
-        time.sleep(self.delay/1000)
+        #time.sleep(self.delay/1000)
             
         
         self.Status = 'initializing acquisition'
@@ -297,8 +297,15 @@ class App(tk.Tk):
                 self.lastAcquisition = thread.lastacquisition                
                 self.update()
                 
-            if self.doAutoAcq:                
-                self.doTrigAcq()
+            if self.doAutoAcq:    
+                #pass
+                #self.doTrigAcq()
+                self.forcebutt['state']='normal'
+                self.acqbutt['state']='normal' 
+                self.set_state(self.acqtbl,'normal')
+                self.set_state(self.Fpeak,'normal')
+                
+                #self.after(int(self.delay.get()),self.doTrigAcq())
             else:
                 self.forcebutt['state']='normal'
                 self.acqbutt['state']='normal' 

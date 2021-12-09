@@ -85,6 +85,7 @@ class stream(Thread):
         self.Status = 'delaying ...'
         self.StatusColor = 'red'
         time.sleep(self.delay/1000)
+            
         
         self.Status = 'initializing acquisition'
         self.StatusColor = 'red'
@@ -117,6 +118,17 @@ class stream(Thread):
         ljmScanBacklog = 0      # Backlog on the LJM
         dataAll=[]              # All data
         sleepTime = float(scansperread)/float(scanrate)
+        
+        # Wait until trigger level is appropriate
+        tLevel = 0;
+        timeout = 1
+        t0 = time.time()
+        while (tLevel == 0):
+            tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
+            if ((time.time()-t0)>timeout):
+                print('trig detected')
+                tLevel=1
+            time.sleep(0.01)     
 
         # Configure and start stream
         scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)   
@@ -948,18 +960,7 @@ class App(tk.Tk):
         stream_thread.scansperread=int(self.scansperread.get())
         stream_thread.InputChannels = self.InputChannels
         stream_thread.TriggerChannel = self.TriggerChannel                 
-        stream_thread.delay=int(self.delay.get())
-
-        # Wait until trigger level is appropriate
-        tLevel = 0;
-        timeout = 1
-        t0 = time.time()
-        while (tLevel == 0):
-            tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
-            if ((time.time()-t0)>timeout):
-                print('trig detected')
-                tLevel=1
-            time.sleep(0.01)          
+        stream_thread.delay=int(self.delay.get())        
         
         stream_thread.start()
         self.process_stream(stream_thread)  

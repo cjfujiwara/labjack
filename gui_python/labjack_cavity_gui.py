@@ -1025,9 +1025,9 @@ class App(tk.Tk):
                     tL = np.min([TpA[0],TpB[0]])
                     tH = np.max([TpA[1],TpB[1]])
                     
-                    tL = np.round(tL - 15)
-                    tL = np.round(tH + 15)
-                    
+                    tL = round(tL - 15)
+                    tH = round(tH + 15)
+       
                     self.tstart.set(str(tL))
                     self.tend.set(str(tH))
                 

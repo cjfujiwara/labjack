@@ -811,6 +811,8 @@ class App(tk.Tk):
         ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
                                 ljm.constants.STREAM_SCANS_RETURN_ALL_OR_NONE)
         ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 30)  
+        ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 1000)  
+
 
     def configTrig(self):
         address = ljm.nameToAddress(self.TriggerChannel)[0]
@@ -959,6 +961,7 @@ class App(tk.Tk):
         t0 = time.time()
         while (tLevel == 0):
             tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
+            print(tLevel)
             if ((time.time()-t0)>timeout):
                 tLevel=1
             time.sleep(0.01)          

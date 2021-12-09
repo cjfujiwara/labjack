@@ -148,7 +148,7 @@ class stream(Thread):
 
             except ljm.LJMError as err:
                 if err.errorCode == ljm.errorcodes.NO_SCANS_RETURNED:  
-                    if ((time.time()-t2)-Tacquire)>1:
+                    if ((time.time()-t2)-Tacquire)>2:
                         self.Status = 'acquisition timeout'
                         self.StatusColor ='red'
 
@@ -186,12 +186,7 @@ class stream(Thread):
             # Convert data to mV and ms
             self.t = 1000*tVec
             self.y1 = 1000*data[:,0]
-            self.y2 = 1000*data[:,1]
-
-            print(self.t.shape)
-            print(self.y1.shape)
-            print(self.y2.shape)
-
+            self.y2 = 1000*data[:,1]    
 
             self.lastacquisition = tAcq
             self.lastacq = time.time()
@@ -961,8 +956,8 @@ class App(tk.Tk):
         t0 = time.time()
         while (tLevel == 0):
             tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
-            print(tLevel)
             if ((time.time()-t0)>timeout):
+                print('trig detected')
                 tLevel=1
             time.sleep(0.01)          
         

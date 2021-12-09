@@ -57,8 +57,7 @@ class stream(Thread):
         super().__init__()
         self.handle = handle
         self.goodStream         = True
-        self.Status             = 'idle'
-        self.StatusColor        = 'yellow'
+
 
         # Stream Properties
         self.scanrate           = None
@@ -123,16 +122,12 @@ class stream(Thread):
         sleepTime = float(scansperread)/float(scanrate)
         
         # Wait until trigger level is appropriate
-        tLevel = 0;
-        timeout = 1
-        t0 = time.time()
-        while (tLevel == 0):
-            tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
-            if tLevel==1:
-                print('trig detected')
-            if ((time.time()-t0)>timeout):
-                tLevel=1
-            time.sleep(0.01)     
+        #tLevel = 0;
+        #timeout = 1
+        #t0 = time.time()
+        #while (tLevel == 0):
+            #tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
+            #time.sleep(0.01)     
 
         # Configure and start stream
         scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)   
@@ -176,8 +171,8 @@ class stream(Thread):
                         #self.AcqStatus.update()
                         
 
-                        #self.AcqStatus.config(text='ACQUISITION TIMEOUT',fg='red')
-                        #self.AcqStatus.update()
+                        self.AcqStatus.config(text='ACQUISITION TIMEOUT',fg='red')
+                        self.AcqStatus.update()
                         self.goodStream=0
                     sys.stdout.flush()
                     continue
@@ -186,7 +181,7 @@ class stream(Thread):
                     print(ljme)
                     self.goodStream=False  
 
-        tAcq = time.strftime('%Y-%m-%d_%H-%M-%S') 
+        #tAcq = time.strftime('%Y-%m-%d_%H-%M-%S') 
 
         try:
             ljm.eStreamStop(self.handle)   
@@ -214,17 +209,16 @@ class stream(Thread):
             self.y1 = 1000*data[:,0]
             self.y2 = 1000*data[:,1]    
 
-            self.lastacquisition = tAcq
+            #self.lastacquisition = tAcq
             self.lastacq = time.time()
             if totSkip>0:
                 print("lost frames : " + str(totSkip))
         else:
             time.sleep(0.1)
+            
+        self.AcqStatus.config(text='idle ',fg='brown')
+        self.AcqStatus.update()     
 
-        #self.AcqStatus.config(text='not acquiring',fg='red')
-        #self.AcqStatus.update()        
-        self.Status = 'idle'    
-        self.StatusColor ='brown'
 
 
 class App(tk.Tk):
@@ -298,11 +292,11 @@ class App(tk.Tk):
     def process_stream(self, thread):
         if thread.is_alive():
             # check the thread every 100ms
-            self.after(1000, lambda: self.process_stream(thread))
+            self.after(10, lambda: self.process_stream(thread))
             #self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
             #self.AcqStatus.update()   
         else:
-            self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
+            #self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
                 
             if thread.goodStream:
                 self.t = thread.t
@@ -319,7 +313,7 @@ class App(tk.Tk):
                 #self.set_state(self.acqtbl,'normal')
                 #self.set_state(self.Fpeak,'normal')
                 
-                self.after(int(self.delay.get()),self.startacq())
+                self.after(int(self.delay.get()),self.doTrigAcq())
                 #self.doTrigAcq()
             else:
                 self.forcebutt['state']='normal'
@@ -964,24 +958,19 @@ class App(tk.Tk):
         
     def startacq(self):
         self.doAutoAcq = True
-        t1=time.time()
         self.configTrig()
+        self.configMan()
         self.configLJM()              
-        t2=time.time()
-        print(t2-t1)
+
         self.forcebutt['state']='disabled'
-        self.acqbutt['state']='disabled'  
-        
+        self.acqbutt['state']='disabled'          
         self.set_state(self.acqtbl,'disabled')
         self.set_state(self.Fpeak,'disabled')
-
         self.dolockbutt['state']='normal'
+        
         self.doTrigAcq()
         
-    def doTrigAcq(self):        
-        # Initialize Stream object
-        self.configTrig()
-        self.configLJM()   
+    def doTrigAcq(self):   
         
         stream_thread = stream(self.handle)            
         stream_thread.numscans=int(self.numscans.get())

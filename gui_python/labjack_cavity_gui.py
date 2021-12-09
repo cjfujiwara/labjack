@@ -197,6 +197,8 @@ class App(tk.Tk):
         self.InputChannels = ["AIN0", "AIN1"]
         self.OutputChannel = "DAC0"
 
+        self.autoTrack = tk.IntVar(self)
+
         self.connectMode = tk.StringVar(self)   # Connect Mode
         self.connectStr = tk.StringVar(self)    # Connect String    
         
@@ -317,8 +319,8 @@ class App(tk.Tk):
         self.connectStr.set('192.168.0.177')   
         self.connectMode.set(self.connectOptions[0])
         
-        self.connectStr.set('192.168.1.124')   
-        self.connectMode.set(self.connectOptions[0])
+        #self.connectStr.set('192.168.1.124')   
+        #self.connectMode.set(self.connectOptions[0])
         
         # Output voltage default values
         self.output.set('??')
@@ -532,9 +534,7 @@ class App(tk.Tk):
         tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
                  width=14,textvariable=self.tstart,
                  validatecommand=vcmd1,validate='key').grid(
-                     row=1,column=2,columnspan=1,sticky='NSEW')   
-                     
-                
+                     row=1,column=2,columnspan=1,sticky='NSEW')                 
                      
         # Time End
         tk.Label(tbl3,text='time end (ms)',font=(font_name,"10"),
@@ -552,12 +552,19 @@ class App(tk.Tk):
         tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
                  width=14,textvariable=self.minpeak,validatecommand=self.vcmdNum,validate='key').grid(
                      row=3,column=2,columnspan=1,sticky='NSEW')  
-        
+        # Peak Height
+        tk.Label(tbl3,text='auto time bounds?',font=(font_name,"10"),
+                 bg='white',justify='left',bd=0,width=18).grid(
+                     row=3,column=1,columnspan=1,stick='w')  
+        tk.Checkbutton(tbl3,bg='white',font=(font_name,"10"),justify='center',
+                 variable=self.autoTrack).grid(
+                     row=3,column=2,columnspan=1,sticky='NSEW')  
+                     
         # FSR
         tk.Label(tbl3,text='FSR (MHz)',font=(font_name,"10"),bg='white',
-                 justify='left',bd=0,width=18).grid(row=4,column=1,columnspan=1,stick='w') 
+                 justify='left',bd=0,width=18).grid(row=5,column=1,columnspan=1,stick='w') 
         tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.FSR,validatecommand=self.vcmdNum,validate='key').grid(row=4,column=2,columnspan=1,sticky='NSEW')  
+                 width=14,textvariable=self.FSR,validatecommand=self.vcmdNum,validate='key').grid(row=5,column=2,columnspan=1,sticky='NSEW')  
 
         # Peaks Analysis Output
         tk.Label(self.Fpeakout,text='Peak Analysis Output',font=(font_name_lbl,"12"),
@@ -964,7 +971,7 @@ class App(tk.Tk):
         self.LockStatus.config(text='lock not engaged',fg='red')
         self.LockStatus.update()    
     def update(self): 
-        
+
         self.p1.set_data(self.t,self.y1)
         self.p2.set_data(self.t,self.y2)
         
@@ -995,6 +1002,11 @@ class App(tk.Tk):
             
             # Process the peaks if there are four of them
             if tP.size == 4:
+                
+  
+                    
+                    
+                
                 # Get the two biggest peaks and sort by time
                 TpA = tP[2:4]
                 yA = yP[2:4]            
@@ -1008,6 +1020,16 @@ class App(tk.Tk):
                 iB = np.argsort(TpB)
                 TpB = TpB[iB]
                 yB = yB[iB] 
+                
+                if (self.autoTrack.get()==1):
+                    tL = np.min([TpA[0],TpB[0]])
+                    tH = np.max([TpA[1],TpB[1]])
+                    
+                    tL = np.round(tL - 15)
+                    tL = np.round(tH + 15)
+                    
+                    self.tstart.set(str(tL))
+                    self.tend.set(str(tH))
                 
                 # Calculate the FSR            
                 FSR_A = np.round(abs(TpA[0]-TpA[1]),2)

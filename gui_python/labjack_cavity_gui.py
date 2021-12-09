@@ -82,16 +82,6 @@ class stream(Thread):
         self.AcqStatus.config(text='acquiring ... ',fg='green')
         self.AcqStatus.update()  
         
-        #self.AcqStatus.config(text='delaying ...',fg='red')
-        #self.AcqStatus.update()
-        #time.sleep(self.delay/1000)
-            
-        
-#        self.Status = 'initializing acquisition'
- #       self.StatusColor = 'red'
-        #self.AcqStatus.config(text='initializing acquisition ...',fg='red')
-        #self.AcqStatus.update()
-        
         # Scan list addresses for streamBurst    
         nAddr = len(self.InputChannels)
         aScanList = ljm.namesToAddresses(nAddr, self.InputChannels)[0]   
@@ -100,18 +90,7 @@ class stream(Thread):
         scanrate = float(self.scanrate)
         numscans=int(self.numscans)
         scansperread=int(self.scansperread)
-        
-        # Other
-        Tacquire = numscans/scanrate
-        #samplerate = scanrate*nAddr
-        
-        # Display acquisition settings
-        #print("\n " + "Scan rate".ljust(20) + ": %s Hz" % scanrate)
-        #print(" " + "Number of Scans".ljust(20) + ": %s" % numscans)
-        #print(" " + "Total Duration".ljust(20) + ": %s sec" % Tacquire) 
-        #print(" " + "Scans per read".ljust(20) + ": %s" % scansperread) 
-        #print(" " + "Number of Channels".ljust(20) + ": %s" % nAddr)
-        #print(" " + "Total Sample rate".ljust(20) + ": %s Hz" % samplerate)    
+        Tacquire = numscans/scanrate  
         
         # Initilize Counters
         totScans = 0            # Total scans read
@@ -122,55 +101,36 @@ class stream(Thread):
         sleepTime = float(scansperread)/float(scanrate)
         
         # Wait until trigger level is appropriate
-        #tLevel = 0;
-        #timeout = 1
-        #t0 = time.time()
-        #while (tLevel == 0):
-            #tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
-            #time.sleep(0.01)     
+        tLevel = 0;
+        while (tLevel == 0):
+            tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
+            time.sleep(0.005)     
 
         # Configure and start stream
         scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)   
         t2 = time.time()
         time.sleep(sleepTime + 0.01)
-        #self.Status = 'acquiring ...'
-        #self.StatusColor ='green'
-        
-        #self.AcqStatus.config(text='acquiring ...',fg='green')
-        ##elf.AcqStatus.update()
         
         while (totScans < numscans) & self.goodStream:
             try:                
                 ret = ljm.eStreamRead(self.handle) # read data in buffer
-                # Recrod the data
                 aData = ret[0]
                 #ljmScanBacklog = ret[2]
                 scans = len(aData) / nAddr
                 totScans += scans 
-                dataAll+=aData                
-             
+                dataAll+=aData  
                 # -9999 values are skipped ones
                 curSkip = aData.count(-9999.0)
-                totSkip += curSkip    
-                
+                totSkip += curSkip                    
                 #print("eStreamRead %i : %i scans, %0.0f scans skipped, %i device backlog, %i in LJM backlog" % (i,totScans, curSkip/nAddr, ret[1], ljmScanBacklog))
 
-                # Increment read counter    
-                i += 1
-                
+                i += 1                
                 if totScans<numscans:
                     time.sleep(sleepTime)
 
             except ljm.LJMError as err:
                 if err.errorCode == ljm.errorcodes.NO_SCANS_RETURNED:  
                     if ((time.time()-t2)-Tacquire)>2:
-                        #self.Status = 'acquisition timeout'
-                        #self.StatusColor ='red'
-                        
-                        #self.AcqStatus.config(text='acquisition timeout',fg='red')
-                        #self.AcqStatus.update()
-                        
-
                         self.AcqStatus.config(text='ACQUISITION TIMEOUT',fg='red')
                         self.AcqStatus.update()
                         self.goodStream=0
@@ -181,8 +141,6 @@ class stream(Thread):
                     print(ljme)
                     self.goodStream=False  
 
-        #tAcq = time.strftime('%Y-%m-%d_%H-%M-%S') 
-
         try:
             ljm.eStreamStop(self.handle)   
         except ljm.LJMError:
@@ -192,14 +150,11 @@ class stream(Thread):
             e = sys.exc_info()[1]
             print(e)                
         if self.goodStream:  
-            t3=time.time()
-            #print(t3-t2)
-            #self.AcqStatus.config(text='processing ...',fg='green')
-            #self.AcqStatus.update()
+            #t3=time.time()
 
             self.AcqStatus.config(text='processing stream ... ',fg='green')
-            self.AcqStatus.update()            
-            #tVec = (np.array([range(numscans)]).T)/scanrate
+            self.AcqStatus.update()     
+            
             tVec = np.linspace(0,numscans-1,numscans)/scanrate
             data = np.zeros((numscans,nAddr))
             data = np.array(dataAll).reshape(numscans,nAddr)   
@@ -218,6 +173,7 @@ class stream(Thread):
             
         self.AcqStatus.config(text='idle ',fg='brown')
         self.AcqStatus.update()     
+        #time.sleep(.5)
 
 
 
@@ -291,10 +247,8 @@ class App(tk.Tk):
         
     def process_stream(self, thread):
         if thread.is_alive():
-            # check the thread every 100ms
-            self.after(10, lambda: self.process_stream(thread))
-            #self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
-            #self.AcqStatus.update()   
+            self.after(100, lambda: self.process_stream(thread))
+
         else:
             #self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
                 
@@ -306,15 +260,7 @@ class App(tk.Tk):
                 self.update()
                 
             if self.doAutoAcq:    
-                #pass
-                #self.doTrigAcq()
-                #self.forcebutt['state']='normal'
-                #self.acqbutt['state']='normal' 
-                #self.set_state(self.acqtbl,'normal')
-                #self.set_state(self.Fpeak,'normal')
-                
                 self.after(int(self.delay.get()),self.doTrigAcq())
-                #self.doTrigAcq()
             else:
                 self.forcebutt['state']='normal'
                 self.acqbutt['state']='normal' 
@@ -371,6 +317,9 @@ class App(tk.Tk):
         self.connectStr.set('192.168.0.177')   
         self.connectMode.set(self.connectOptions[0])
         
+        self.connectStr.set('192.168.1.124')   
+        self.connectMode.set(self.connectOptions[0])
+        
         # Output voltage default values
         self.output.set('??')
         self.outputMax.set('2500')
@@ -391,7 +340,7 @@ class App(tk.Tk):
         self.dF.set('??')    
         
         self.dFset.set('-200')
-        self.hys.set('200')
+        self.hys.set('50')
         self.dV.set('1')  
         
     def set_output_state(self,state):
@@ -671,28 +620,28 @@ class App(tk.Tk):
         self.nolockbutt.grid(row = 1, column=2,sticky='w')  
         
         # Table For Lock Settings
-        tbl4 = tk.Frame(self.Flock,bd=1,bg="white",highlightbackground="grey",highlightthickness=1)
-        tbl4.grid(row=4,column=1,columnspan=3,sticky='nswe')
+        self.locktable = tk.Frame(self.Flock,bd=1,bg="white",highlightbackground="grey",highlightthickness=1)
+        self.locktable.grid(row=4,column=1,columnspan=3,sticky='nswe')
         
         # df set
-        tk.Label(tbl4,text='\u0394f set (GHz)',font=(font_name,"10"),
+        tk.Label(self.locktable,text='\u0394f set (GHz)',font=(font_name,"10"),
                  bg='white',justify='left',height=1,bd=0,width=18).grid(
                      row=1,column=1,columnspan=1,stick='w')
-        tk.Entry(tbl4,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dFset).grid(
+        tk.Entry(self.locktable,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dFset).grid(
             row=1,column=2,columnspan=1,sticky='NSEW')   
         
         # hysteresis
-        tk.Label(tbl4,text='hysteresis (MHz)',font=(font_name,"10"),
+        tk.Label(self.locktable,text='hysteresis (MHz)',font=(font_name,"10"),
                  bg='white',justify='left',height=1,bd=0,width=18).grid(
                      row=2,column=1,columnspan=1,stick='w')
-        tk.Entry(tbl4,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.hys,validatecommand=self.vcmdNum,validate='key').grid(
+        tk.Entry(self.locktable,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.hys,validatecommand=self.vcmdNum,validate='key').grid(
             row=2,column=2,columnspan=1,sticky='NSEW')  
         
         # step size
-        tk.Label(tbl4,text='\u0394V output step (mV)',font=(font_name,"10"),
+        tk.Label(self.locktable,text='\u0394V output step (mV)',font=(font_name,"10"),
                  bg='white',justify='left',height=1,bd=0,width=18).grid(
                      row=3,column=1,columnspan=1,stick='w')
-        tk.Entry(tbl4,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dV,validatecommand=self.vcmdNum,validate='key').grid(
+        tk.Entry(self.locktable,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dV,validatecommand=self.vcmdNum,validate='key').grid(
             row = 3, column=2,columnspan=1,sticky='NSEW')  
         
     def validNum(self,P):
@@ -766,10 +715,12 @@ class App(tk.Tk):
         self.fig.autofmt_xdate()
         gs = GridSpec(3, 1, figure=self.fig)        
         self.ax1 = self.fig.add_subplot(gs[:-1, :])
-        self.ax1.set_ylabel("cavity voltage (V)",color='black')
+        self.ax1.set_ylabel("cavity voltage (mV)",color='black')
         self.ax1.set_xlabel("time (ms)")
         self.p1, = self.ax1.plot(self.t,self.y1,color='black')
         self.ax1.set_xlim([0,300])
+        
+        self.ax1.grid(True)
         
         self.pdT, = self.ax1.plot(np.array([0,1]),np.array([1000,1000]),color='blue')
         self.pdT.set_visible(False)
@@ -789,7 +740,7 @@ class App(tk.Tk):
         color = 'tab:blue'
         self.ax2 = self.ax1.twinx()  # instantiate a second axes that shares the same x-axis
         color = 'tab:red'
-        self.ax2.set_ylabel('cavity ramp (V)', color=color)  # we already handled the x-label with ax1
+        self.ax2.set_ylabel('cavity ramp (mV)', color=color)  # we already handled the x-label with ax1
         self.p2,=self.ax2.plot(self.t, self.y2, color=color)
         self.ax2.tick_params(axis='y', labelcolor=color)
         
@@ -800,9 +751,11 @@ class App(tk.Tk):
         myFmt = DateFormatter('%H:%M:%S')
         self.ax3.xaxis.set_major_formatter(myFmt)
         
+        self.ax3.grid(True)
+        
         color = 'tab:blue'
         self.ax4 = self.ax3.twinx()  # instantiate a second axes that shares the same x-axis
-        self.ax4.set_ylabel('output (V)', color=color)  # we already handled the x-label with ax1
+        self.ax4.set_ylabel('output (mV)', color=color)  # we already handled the x-label with ax1
         self.p4,=self.ax4.plot(tHisFake,vFake, color=color)
         self.ax4.tick_params(axis='y', labelcolor=color)
         self.ax4.xaxis.set_major_formatter(myFmt)
@@ -833,8 +786,10 @@ class App(tk.Tk):
     def configLJM(self):
         ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
                                 ljm.constants.STREAM_SCANS_RETURN_ALL_OR_NONE)
-        ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 30)  
-        ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 1000)  
+        ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
+                                ljm.constants.STREAM_SCANS_RETURN_ALL)
+        ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 0)  
+        #ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 30)  
 
 
     def configTrig(self):
@@ -845,8 +800,13 @@ class App(tk.Tk):
         ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 0);
     
         # 5 enables a rising or falling edge to trigger stream
-        ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 4);
-        ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 1);
+        #ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 4);
+        #ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 1);
+        
+        ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 12);
+        ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 0);       
+        ljm.eWriteName(self.handle, "%s_EF_CONFIG_B" % self.TriggerChannel, 1);       
+
 
         # Enable
         ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 1);
@@ -952,26 +912,25 @@ class App(tk.Tk):
         stream_thread.TriggerChannel = self.TriggerChannel
         stream_thread.delay=int(self.delay.get())
         stream_thread.AcqStatus=self.AcqStatus        
-
+        
         stream_thread.start()
         self.process_stream(stream_thread)         
         
     def startacq(self):
         self.doAutoAcq = True
         self.configTrig()
-        self.configMan()
+        #self.configMan()
         self.configLJM()              
 
         self.forcebutt['state']='disabled'
         self.acqbutt['state']='disabled'          
         self.set_state(self.acqtbl,'disabled')
         self.set_state(self.Fpeak,'disabled')
-        self.dolockbutt['state']='normal'
-        
+        self.dolockbutt['state']='normal'        
         self.doTrigAcq()
+
         
-    def doTrigAcq(self):   
-        
+    def doTrigAcq(self):           
         stream_thread = stream(self.handle)            
         stream_thread.numscans=int(self.numscans.get())
         stream_thread.scanrate=int(self.scanrate.get())
@@ -980,7 +939,6 @@ class App(tk.Tk):
         stream_thread.TriggerChannel = self.TriggerChannel                 
         stream_thread.delay=int(self.delay.get())        
         stream_thread.AcqStatus=self.AcqStatus        
-
         stream_thread.start()
         self.process_stream(stream_thread)  
             
@@ -994,28 +952,18 @@ class App(tk.Tk):
         self.doLock = True            
         self.dolockbutt['state']='disabled'
         self.nolockbutt['state']='normal'
+
+        self.LockStatus.config(text='lock engaged',fg='green')
+        self.LockStatus.update()     
+        
     def stoplock(self):
         self.doLock = False
         self.dolockbutt['state']='normal'
         self.nolockbutt['state']='disabled'
 
+        self.LockStatus.config(text='lock not engaged',fg='red')
+        self.LockStatus.update()    
     def update(self): 
-        
-        #lorentz = lambda t,c,g: 1/(((t-c)/g)**2+1)
-        
-        #ya1 = 800*lorentz(self.t,70,.5)        
-        #ya2 = 810*lorentz(self.t,105,.5)  
-        #ya3 = 800*lorentz(self.t,175,.5)        
-        #ya4 = 810*lorentz(self.t,245,.5)  
-        
-        #yb1 = 1280*lorentz(self.t,10,.5)
-        #yb2 = 1280*lorentz(self.t,80,.5)
-        #yb3 = 1300*lorentz(self.t,115,.5)        
-        #yb4 = 1280*lorentz(self.t,185,.5)
-        #yb5 = 1280*lorentz(self.t,255,.5)
-  
-        #y = ya1+ya2+ya3+ya4+yb1+yb2+yb3+yb4+yb5
-        #r = 1000*self.t/np.max(self.t)
         
         self.p1.set_data(self.t,self.y1)
         self.p2.set_data(self.t,self.y2)
@@ -1028,20 +976,18 @@ class App(tk.Tk):
             t = self.t
             y = self.y1 
             
-            print(t)
-            
             i1 = t >= int(self.tstart.get())
             i2 = t <= int(self.tend.get())            
             i = i1 & i2            
             y = y[i]
             t = t[i]
     
-            peaks=scipy.signal.find_peaks(y, height=None, threshold=None, 
-                                    distance=None, prominence=0.5, width=None, 
-                                    wlen=None, rel_height=0.5, plateau_size=None)            
+            # Find peaks
+            peaks=scipy.signal.find_peaks(y, height=500,prominence=500) 
+            
             yP = y[peaks[0]]
             tP = t[peaks[0]]
-            
+      
             # Sort in ascending order
             i = np.argsort(yP)        
             yP = yP[i]
@@ -1064,12 +1010,12 @@ class App(tk.Tk):
                 yB = yB[iB] 
                 
                 # Calculate the FSR            
-                FSR_A = abs(TpA[0]-TpA[1])
-                FSR_B = abs(TpB[0]-TpB[1])
+                FSR_A = np.round(abs(TpA[0]-TpA[1]),2)
+                FSR_B = np.round(abs(TpB[0]-TpB[1]),2)
                 
                 # Calculate the time separation
-                dT = TpB[0]-TpA[0]                
-                dF = float(self.FSR.get())*dT/FSR_A
+                dT = np.round(TpB[0]-TpA[0],2)
+                dF = np.round(float(self.FSR.get())*dT/FSR_A)
     
                 self.dT.set(str(dT))
                 self.FSRtime.set(str(FSR_A))
@@ -1086,9 +1032,9 @@ class App(tk.Tk):
                 tNow = datetime.datetime.now()
                 
                 if len(self.tHis) == self.nHis:
-                    self.tHis.pop()
-                    self.dfHis.pop()
-                    self.vHis.pop()
+                    self.tHis.pop(0)
+                    self.dfHis.pop(0)
+                    self.vHis.pop(0)
                 
                 self.tHis.append(tNow)
                 self.dfHis.append(dF)
@@ -1108,10 +1054,10 @@ class App(tk.Tk):
                     hys = int(self.hys.get())                
                     err = dF - dFset                       
                     dV = int(self.dV.get())
-                                    
-                    if err>0 & abs(err)<hys:
+
+                    if (err<0) & (abs(err)>hys):
                         self.increment(dV)                    
-                    if err<0 & abs(err)<hys:
+                    if (err>0) & (abs(err)>hys):
                         self.increment(-dV)                    
             else:
                 self.pdT.set_visible(False)

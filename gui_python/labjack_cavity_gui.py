@@ -316,11 +316,11 @@ class App(tk.Tk):
         self.connectStr.set('470026765')   
         self.connectMode.set(self.connectOptions[2])
         
-        self.connectStr.set('192.168.0.177')   
-        self.connectMode.set(self.connectOptions[0])
-        
-        #self.connectStr.set('192.168.1.124')   
+        #self.connectStr.set('192.168.0.177')   
         #self.connectMode.set(self.connectOptions[0])
+        
+        self.connectStr.set('192.168.1.124')   
+        self.connectMode.set(self.connectOptions[0])
         
         # Output voltage default values
         self.output.set('??')

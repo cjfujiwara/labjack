@@ -233,7 +233,7 @@ class App(tk.Tk):
         
         self.tHis=[]
         self.vHis=[]
-        self.nHis=100
+        self.nHis=400
         self.dfHis=[]
         
         self.defaultSettings()        
@@ -319,7 +319,7 @@ class App(tk.Tk):
         #self.connectStr.set('192.168.0.177')   
         #self.connectMode.set(self.connectOptions[0])
         
-        self.connectStr.set('192.168.1.124')   
+        self.connectStr.set('192.168.1.125')   
         self.connectMode.set(self.connectOptions[0])
         
         # Output voltage default values
@@ -332,8 +332,8 @@ class App(tk.Tk):
         self.scansperread.set('5500')
         self.delay.set('500')
 
-        self.tstart.set('100')
-        self.tend.set('240')
+        self.tstart.set('110')
+        self.tend.set('210')
         self.minpeak.set('500')
         self.FSR.set('1500')
         
@@ -592,7 +592,7 @@ class App(tk.Tk):
                      row=2,column=2,columnspan=1,stick='w')  
         
         # dF
-        tk.Label(tbl4,text='\u0394f meas. (GHz)',font=(font_name,"10"),
+        tk.Label(tbl4,text='\u0394f meas. (MHz)',font=(font_name,"10"),
                  bg='white',justify='left',bd=0,width=18).grid(
                      row=3,column=1,columnspan=1,stick='w')  
         tk.Label(tbl4,textvariable=self.dF,font=(font_name,"10"),bg='white',justify='left',
@@ -631,7 +631,7 @@ class App(tk.Tk):
         self.locktable.grid(row=4,column=1,columnspan=3,sticky='nswe')
         
         # df set
-        tk.Label(self.locktable,text='\u0394f set (GHz)',font=(font_name,"10"),
+        tk.Label(self.locktable,text='\u0394f set (MHz)',font=(font_name,"10"),
                  bg='white',justify='left',height=1,bd=0,width=18).grid(
                      row=1,column=1,columnspan=1,stick='w')
         tk.Entry(self.locktable,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dFset).grid(
@@ -753,7 +753,7 @@ class App(tk.Tk):
         
         self.ax3 = self.fig.add_subplot(gs[-1, :])
         self.p3,=self.ax3.plot(tHisFake, dfFake, color='black')
-        self.ax3.set_ylabel(r"$\Delta f~\mathrm{measure}~(\mathrm{GHz})$")
+        self.ax3.set_ylabel(r"$\Delta f~\mathrm{measure}~(\mathrm{MHz})$")
         self.ax3.set_xlabel("time")
         myFmt = DateFormatter('%H:%M:%S')
         self.ax3.xaxis.set_major_formatter(myFmt)
@@ -976,7 +976,7 @@ class App(tk.Tk):
         self.p2.set_data(self.t,self.y2)
         
         self.ax1.set_xlim(0,np.amax(self.t))
-        self.ax1.set_ylim(0,1400)
+        self.ax1.set_ylim(-100,300)
         self.ax2.set_ylim(0,1200)        
         
         if int(self.tstart.get())<int(self.tend.get()):
@@ -990,7 +990,7 @@ class App(tk.Tk):
             t = t[i]
     
             # Find peaks
-            peaks=scipy.signal.find_peaks(y, height=500,prominence=500) 
+            peaks=scipy.signal.find_peaks(y, height=6,prominence=6) 
             
             yP = y[peaks[0]]
             tP = t[peaks[0]]

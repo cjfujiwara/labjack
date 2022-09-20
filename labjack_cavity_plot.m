@@ -4,7 +4,7 @@ function [hF, data] = labjack_cavity_plot(t1,t2,opts)
 
 if nargin == 0 
     t2 = now;           % T end
-    t1 = now - .05;       % T start
+    t1 = now - 1;       % T start
     opts = struct;
     opts.dt = .2;        % Averaging time (minutes)
     opts.FigLabel = [];

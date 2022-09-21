@@ -33,6 +33,9 @@ print("Loading packages ...")
 # Import packages
 from threading import Thread
 
+import wavemeter as wavemeter
+from labjack import ljm
+
 import sys
 from datetime import datetime
 from time import strftime
@@ -44,14 +47,45 @@ from matplotlib.backends.backend_tkagg import (
 import tkinter as tk
 import scipy.io
 import time
+import csv
 
-#import pyvisa
-#rm = pyvisa.ResourceManager()
-#rm.list_resources()
-#inst = rm.open_resource('GPIB0::1::INSTR')
-#print(inst.query("*IDN?"))
+# Labckjack configuration
+t7name="CurrentMonitor"
+myip="192.168.1.124"
 
-#inst.close()
+#handle=ljm.openS("T7","ETHERNET",'470026765')
+
+t7=ljm.openS("T7","ETHERNET",myip)
+info = ljm.getHandleInfo(t7)
+print("Opened a LabJack with Device type: %i, Connection type: %i,\n"
+      "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" %
+      (info[0], info[1], info[2], ljm.numberToIP(info[3]), info[4], info[5]))
+ 
+numFrames = 1
+names = ["DAC0"]
+aValues = [2.5]  # [2.5 V, 12345]
+ljm.eWriteNames(t7, numFrames, names, aValues)
+
+print("Closing the labjack ... ") 
+ljm.close(t7)
+print("Program complete.") 
+
+   
+wm = wavemeter.WM(publish=False)
+
+f = wm.read_frequency(3)
+f0 = 391016.296
+
+print(f)
+
+
+import pyvisa
+rm = pyvisa.ResourceManager()
+rm.list_resources()
+inst = rm.open_resource('GPIB0::1::INSTR')
+print(inst.query("*IDN?"))
+
+
 
 class vortex_controller(Thread):
     def __init__(self,instrument):
@@ -112,9 +146,127 @@ class App(tk.Tk):
         self.destroy()
 
 
-if __name__ == "__main__":
-     app = App()
-     app.protocol("WM_DELETE_WINDOW", app.on_closing)
-     app.mainloop()       
+"""
+start=0
+step=1
+num=105
+vals1 = np.arange(0,num)*step+start
+vals2 = np.flip(vals1)
 
-print('hi')
+valsSet = np.concatenate((vals1,vals2))
+
+valsRead = np.zeros(len(valsSet))
+freqRead = np.zeros(len(valsSet))
+
+print(valsSet.shape)
+print(valsRead.shape)
+print(freqRead.shape)
+
+for j in range(len(valsSet)):
+    v = np.round(valsSet[j],1)
+    me = ':SOUR:VOLT:PIEZ ' + str(v)
+    inst.write(me)
+    time.sleep(1)
+    vact = inst.query(":sens:volt:piez")
+    vact = vact.strip()
+    vact = vact.replace("V","")
+    vact = float(vact)    
+    
+    f = wm.read_frequency(3)    
+    
+    print(str(v) + ' V, ' + str(vact) + ' V, ' + str(f) + ' GHz')
+
+    valsRead[j] = vact
+    freqRead[j] = f
+    
+    data=[v,vact,f]   
+        
+    with open(r"cora.csv", 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(data)
+        time.sleep(1)
+    
+
+
+
+#if __name__ == "__main__":
+#     app = App()
+#     app.protocol("WM_DELETE_WINDOW", app.on_closing)
+#     app.mainloop()    
+   """
+   
+"""
+start=50
+step=.5
+num=20
+vals1 = np.arange(0,num)*step+start
+vals2 = np.flip(vals1)
+
+valsSet = np.concatenate((vals1,vals2))
+
+valsRead = np.zeros(len(valsSet))
+freqRead = np.zeros(len(valsSet))
+   
+   
+for j in range(len(valsSet)):
+    v = np.round(valsSet[j],1)
+    me = ':SOUR:CURR ' + str(v)
+    inst.write(me)
+    time.sleep(1)
+    vact = inst.query(":sens:curr")
+    vact = vact.strip()
+    vact = vact.replace("mA","")
+    vact = float(vact)    
+    
+    f = wm.read_frequency(3)    
+    
+    print(str(v) + ' mA, ' + str(vact) + ' mA, ' + str(f) + ' GHz')
+
+    valsRead[j] = vact
+    freqRead[j] = f
+    
+    data=[v,vact,f]   
+        
+    with open(r"cora.csv", 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(data)
+        time.sleep(1)
+"""
+  
+"""
+# Read this frequecny
+f0 = 391016.296
+
+delta0=-50.4
+
+I0 = 50.5
+
+while 1:
+    now = datetime.now()
+    dt_string = now.strftime('%Y/%m/%d %H:%M:%S')    
+    f = wm.read_frequency(3)
+    
+    delta = f-f0
+
+    data = [dt_string,I0,f,delta]
+    print(data)
+    
+    if abs(delta)>.05 :
+        if delta>delta0:
+            I0 = np.round(I0+.1,1)
+        else:
+            I0 = np.round(I0-.1,1)
+            
+        if I0>45 and I0<55 :
+            me = ':SOUR:CURR ' + str(I0)
+            inst.write(me) 
+    
+    with open(r"lock_test.csv", 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(data)
+        
+    time.sleep(1)
+"""
+    
+inst.close()
+

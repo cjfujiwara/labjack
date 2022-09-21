@@ -482,16 +482,16 @@ if __name__=='__main__':
     
  
  #   now = datetime.now()
-  #  dt_string = now.strftime("'%Y/%m/%d %H:%M:%S'")    
-   # f = wm.read_frequency(3)
-    #data = [dt_string, f]
+ #   dt_string = now.strftime("'%Y/%m/%d %H:%M:%S'")    
+  #  f = wm.read_frequency(3)
+   # data = [dt_string, f]
     #print(data)
 
     
-    #with open(r"Y:\wavemeter_amar\cora.csv", 'a', newline='') as f:
-     #   writer = csv.writer(f)
-      #  writer.writerow(data)
-       # time.sleep(1)
+#    with open(r"Y:\wavemeter_amar\cora.csv", 'a', newline='') as f:
+ #       writer = csv.writer(f)
+  #      writer.writerow(data)
+   #     time.sleep(1)
 
 
    

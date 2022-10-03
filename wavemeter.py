@@ -37,9 +37,9 @@ import ctypes
 import zmq
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 #from zmq_publisher import zmqPublisher
-import matplotlib.animation as animation
+#import matplotlib.animation as animation
 
 
 from datetime import datetime

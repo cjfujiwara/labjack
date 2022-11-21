@@ -68,10 +68,11 @@ aValues = [2.5]  # [2.5 V, 12345]
 
 ljm.eWriteName(t7,"DAC0",2.5)
 
-
    
 wm = wavemeter.WM(publish=False)
+print('test')
 f = wm.read_frequency(3)
+print('test2')
 f0 = 391016.296
 
 print(f)

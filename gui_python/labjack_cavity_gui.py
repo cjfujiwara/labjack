@@ -976,7 +976,7 @@ class App(tk.Tk):
         self.p2.set_data(self.t,self.y2)
         
         self.ax1.set_xlim(0,np.amax(self.t))
-        self.ax1.set_ylim(-100,300)
+        self.ax1.set_ylim(-100,2000)
         self.ax2.set_ylim(0,1200)        
         
         if int(self.tstart.get())<int(self.tend.get()):
@@ -1077,9 +1077,9 @@ class App(tk.Tk):
                     err = dF - dFset                       
                     dV = int(self.dV.get())
 
-                    if (err<0) & (abs(err)>hys):
-                        self.increment(dV)                    
                     if (err>0) & (abs(err)>hys):
+                        self.increment(dV)                    
+                    if (err<0) & (abs(err)>hys):
                         self.increment(-dV)                    
             else:
                 self.pdT.set_visible(False)

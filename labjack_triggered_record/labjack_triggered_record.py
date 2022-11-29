@@ -20,6 +20,7 @@ defaultIP = '192.168.1.145'
 
 # tkinter is the main GUI package
 import tkinter as tk
+import os
 
 # Import packages
 import sys
@@ -42,6 +43,7 @@ NavigationToolbar2Tk)
 import numpy as np
 import scipy
 import scipy.signal
+import scipy.io
 # Convert RGB triplet to tk color that is interprable
 def _from_rgb(rgb):
     """translates an rgb tuple of int to a tk friendly color code
@@ -55,6 +57,7 @@ class stream(Thread):
         self.handle = handle
         self.goodStream         = True
 
+        # Saving Stuff
 
         # Stream Properties
         self.scanrate           = None
@@ -98,10 +101,7 @@ class stream(Thread):
         dataAll=[]              # All data
         sleepTime = float(scansperread)/float(scanrate)
         
-     
-        #print('n olonger waiting')
         # Configure and start stream
-        print('starting stream')
         scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)   
         t2 = time.time()
         time.sleep(sleepTime + 0.01)
@@ -177,8 +177,8 @@ class App(tk.Tk):
     def __init__(self):        
         # Create the GUI object
         super().__init__()
-        self.title('Labjack Pulse Analysis')
-        self.geometry("1280x780")
+        self.title('Labjack Oscilloscope')
+        self.geometry("800x600")
         
         self.connectOptions = [
         "IP address (ETH)",
@@ -194,6 +194,8 @@ class App(tk.Tk):
         self.OutputChannel = OutputChannel
 
         self.autoTrack = tk.IntVar(self)
+        self.dirname           = tk.StringVar(self)
+        self.root           = tk.StringVar(self)
 
         self.connectMode = tk.StringVar(self)   # Connect Mode
         self.connectStr = tk.StringVar(self)    # Connect String    
@@ -207,7 +209,7 @@ class App(tk.Tk):
         self.scansperread = tk.StringVar(self)  # Output Voltage Max 
         self.delay = tk.StringVar(self)         # Output Voltage Min 
         self.timeout = tk.StringVar(self)         # Output Voltage Min 
-
+        self.doSave = tk.IntVar(self)
         self.t = np.linspace(0, 300, 301)
         self.y1 = np.exp(-self.t)
      
@@ -236,7 +238,6 @@ class App(tk.Tk):
                 self.forcebutt['state']='normal'
                 self.acqbutt['state']='normal' 
                 self.set_state(self.acqtbl,'normal')
-                #self.set_state(self.Fpeak,'normal')
 
 
     #Define a Function to enable the frame
@@ -265,6 +266,9 @@ class App(tk.Tk):
         self.Facquire = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
         self.Facquire.grid(row=3,column=1,sticky='we')
         
+        # Saving
+        self.Fanalysis = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fanalysis.grid(row=4,column=1,sticky='we')      
      
         # Plots
         self.Fplot = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
@@ -284,10 +288,13 @@ class App(tk.Tk):
         self.output.set('??')
         self.outputMax.set('2500')
         self.outputMin.set('0')    
-        
-        self.scanrate.set('10000')
-        self.numscans.set('1000')
-        self.scansperread.set('1000')
+        self.dirname.set(r'PA')
+        self.root.set(r'Y:\LabjackScope')
+        self.doSave.set(1)
+
+        self.scanrate.set('100000')
+        self.numscans.set('500')
+        self.scansperread.set('500')
         self.delay.set('500')
         self.timeout.set('30')
 
@@ -362,7 +369,7 @@ class App(tk.Tk):
 
         self.acqtbl = tk.Frame(self.Facquire,bd=1,bg="white",highlightbackground="grey",
                         highlightthickness=1)
-        self.acqtbl.grid(row=4,column=1,columnspan=3,sticky='nswe')        
+        self.acqtbl.grid(row=5,column=1,columnspan=3,sticky='nswe')        
 
         # Scan Rate
         tk.Label(self.acqtbl,text='scan rate (Hz)',font=(font_name,"10"),
@@ -408,14 +415,40 @@ class App(tk.Tk):
         tk.Entry(self.acqtbl,bg='white',justify='center',textvariable=self.timeout,
                  font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
                      row=5,column=2,columnspan=1,sticky='w')  
-
-    
-    
-        vcmd1 = (self.register(self.onValidateStart),
-                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-        vcmd2 = (self.register(self.onValidateEnd),
-                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')        
+                     
+        # Acquisition Settings
+        tk.Label(self.Fanalysis,text='Analysis',font=(font_name_lbl,"12"),
+                 bg='white',justify='left',height=1,bd=0).grid(
+                     row=1,column=1,columnspan=1,sticky='w')    
+                     
+        c2 = tk.Checkbutton(self.Fanalysis, text='save data to drive',variable=self.doSave, 
+                            onvalue=1, offvalue=0,bg='white').grid(
+                                row=2,column=1,columnspan=1,sticky='w')    
         
+                     
+              
+        self.analysistbl = tk.Frame(self.Fanalysis,bd=1,bg="white",highlightbackground="grey",
+                        highlightthickness=1)
+        self.analysistbl.grid(row=4,column=1,columnspan=3,sticky='nswe')             
+                     
+        tk.Label(self.analysistbl,text='root',font=(font_name,"10"),
+                 bg='white',justify='left',height=1,bd=0,width=18).grid(
+                     row=1,column=1,columnspan=1,stick='w')
+                    
+        tk.Entry(self.analysistbl,bg='white',justify='center',textvariable=self.root,
+                 font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
+                     row=1,column=2,columnspan=1,sticky='NSEW')               
+                     
+        tk.Label(self.analysistbl,text='directory name',font=(font_name,"10"),
+                 bg='white',justify='left',height=1,bd=0,width=18).grid(
+                     row=2,column=1,columnspan=1,stick='w')
+                    
+        tk.Entry(self.analysistbl,bg='white',justify='center',textvariable=self.dirname,
+                 font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
+                     row=2,column=2,columnspan=1,sticky='NSEW')   
+                 
+    
+
        
         
     def validNum(self,P):
@@ -487,8 +520,11 @@ class App(tk.Tk):
 
         self.fig = Figure()
         self.fig.autofmt_xdate()
-        gs = GridSpec(3, 1, figure=self.fig)        
-        self.ax1 = self.fig.add_subplot(gs[:-1, :])
+        #gs = GridSpec(1, 1, figure=self.fig)        
+        #self.ax1 = self.fig.add_subplot(gs[:-1, :])
+        self.ax1 = self.fig.add_subplot()
+        
+        
         self.ax1.set_ylabel("voltage (mV)",color='black')
         self.ax1.set_xlabel("time (ms)")
         self.p1, = self.ax1.plot(self.t,self.y1,color='black')
@@ -601,25 +637,6 @@ class App(tk.Tk):
             self.b2['state']='disabled'
 
 
-    def increment(self,inc):
-        if self.isConnected:
-            oldVal = float(self.output.get())
-            newVal = oldVal + inc
-            
-            Vlow = float(self.outputMin.get())
-            Vhigh = float(self.outputMax.get())
-            
-            if (newVal >= Vlow) & (newVal<=Vhigh):
-                ljm.eWriteName(self.handle,self.OutputChannel,newVal/1000)
-            elif (newVal < Vlow):
-                ljm.eWriteName(self.handle,self.OutputChannel,Vlow/1000)
-            elif (newVal > Vhigh):
-                ljm.eWriteName(self.handle,self.OutputChannel,Vhigh/1000)
-                    
-            
-            val = ljm.eReadName(self.handle,self.OutputChannel)
-            self.output.set(str(np.round(1000*val,1)))
-
         
     def forceacq(self):
         self.doAutoAcq = False
@@ -680,6 +697,64 @@ class App(tk.Tk):
         self.ax1.set_xlim(0,np.amax(self.t))
         self.ax1.set_ylim(-100,8000)        
         self.canvas.draw()   
+        
+        self.saveData()
+        
+       # arr = numpy.arange(9) # 1d array of 9 numbers
+#arr = arr.reshape((3, 3))  # 2d array of 3x3
+
+#scipy.io.savemat('c:/tmp/arrdata.mat', mdict={'arr': arr})
+
+    def saveData(self):
+        fname,dstr = self.getLogName()       
+   
+        print('saving data to ' + fname)
+        scipy.io.savemat(fname,{"t": self.t, "y": self.y1, 
+                                "t_unit": "ms", 
+                                "y_unit": "mV",
+                                "date": dstr})
+        
+    def getLogName(self):
+        tnow=datetime.datetime.now();
+        
+        y=tnow.year
+        m='%02d' % tnow.month
+        d='%02d' % tnow.day
+        
+        fname0 = tnow.strftime("%Y-%m-%d_%H-%M-%S") + '.mat'
+        dstr = tnow.strftime("%Y/%m/%d %H:%M:%S")
+
+        
+        # Root directory of this type
+        f0 = os.path.join(self.root.get(),self.dirname.get())
+        
+        # Year Directory
+        dir_year = os.path.join(f0,str(y))
+        
+        # Month Directory
+        dir_month = os.path.join(dir_year,str(y) + '.' + str(m))
+        
+        # Day Directory
+        dir_day= os.path.join(dir_month,str(m) + '.' + str(d))
+        
+        # Filename
+        fname = os.path.join(dir_day,fname0)
+        print(dir_year)
+        
+        if not(os.path.isdir(f0)):
+            os.mkdir(f0)
+        
+        if not(os.path.isdir(dir_year)):
+            print('making')
+            os.mkdir(dir_year)
+            
+        if not(os.path.isdir(dir_month)):
+            os.mkdir(dir_month)
+            
+        if not(os.path.isdir(dir_day)):
+            os.mkdir(dir_day)
+            
+        return fname, dstr
             
     def on_closing(self):
         self.disconnect()

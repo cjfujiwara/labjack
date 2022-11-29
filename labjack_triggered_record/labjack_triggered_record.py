@@ -50,6 +50,7 @@ def _from_rgb(rgb):
     """
     return "#%02x%02x%02x" % rgb  
 
+#%% Stream Thread 
 
 class stream(Thread):
     def __init__(self,handle):
@@ -157,8 +158,7 @@ class stream(Thread):
 
             # Convert data to mV and ms
             self.t = 1000*tVec
-            self.y1 = 1000*data[:,0]
-          
+            self.y1 = 1000*data[:,0]          
 
             #self.lastacquisition = tAcq
             self.lastacq = time.time()
@@ -171,6 +171,7 @@ class stream(Thread):
         self.AcqStatus.update()     
         #time.sleep(.5)
 
+#%% Main App Thread 
 
 
 class App(tk.Tk):
@@ -193,31 +194,27 @@ class App(tk.Tk):
         self.InputChannels = InputChannels
         self.OutputChannel = OutputChannel
 
-        self.autoTrack = tk.IntVar(self)
-        self.dirname           = tk.StringVar(self)
-        self.root           = tk.StringVar(self)
+        self.dirname            = tk.StringVar(self)
+        self.root               = tk.StringVar(self)
 
-        self.connectMode = tk.StringVar(self)   # Connect Mode
-        self.connectStr = tk.StringVar(self)    # Connect String    
-        
-        self.output = tk.StringVar(self)        # Output Voltage 
-        self.outputMax = tk.StringVar(self)     # Output Voltage Max
-        self.outputMin = tk.StringVar(self)     # Output Voltage Min
+        self.connectMode        = tk.StringVar(self)    # Connect Mode
+        self.connectStr         = tk.StringVar(self)    # Connect String            
 
-        self.scanrate = tk.StringVar(self)      # Scan Rate 
-        self.numscans = tk.StringVar(self)      # Output Voltage
-        self.scansperread = tk.StringVar(self)  # Output Voltage Max 
-        self.delay = tk.StringVar(self)         # Output Voltage Min 
-        self.timeout = tk.StringVar(self)         # Output Voltage Min 
-        self.doSave = tk.IntVar(self)
-        self.t = np.linspace(0, 300, 301)
-        self.y1 = np.exp(-self.t)
+        self.scanrate           = tk.StringVar(self)    # Scan Rate 
+        self.numscans           = tk.StringVar(self)    # Output Voltage
+        self.scansperread       = tk.StringVar(self)    # Output Voltage Max 
+        self.delay              = tk.StringVar(self)    # Output Voltage Min 
+        self.timeout            = tk.StringVar(self)    # Output Voltage Min 
+        self.doSave             = tk.IntVar(self)
+        self.t                  = np.linspace(0, 300, 301)
+        self.y1                 = np.exp(-self.t)
      
         self.defaultSettings()        
         self.create_frames()        
         self.create_widgets() 
         self.create_plots()                   
         
+    # Process the resultant stream
     def process_stream(self, thread):
         if thread.is_alive():
             self.after(100, lambda: self.process_stream(thread))
@@ -250,36 +247,41 @@ class App(tk.Tk):
             else:
                 self.set_state(child,mystate)
     
+    # Create frames for objects
     def create_frames(self):
-        self.Fopt = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fopt = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",
+                             highlightthickness=2)
         self.Fopt.pack(side='left',anchor='nw',fill='y')
         
         # Connect Frame
-        self.Fconnect = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fconnect = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",
+                                 highlightthickness=2)
         self.Fconnect.grid(row=1,column=1,sticky='we')
         
         # Voltage output
-        self.Foutput = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Foutput = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",
+                                highlightthickness=2)
         self.Foutput.grid(row=2,column=1,sticky='we')
         
         # Acquisition
-        self.Facquire = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Facquire = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",
+                                 highlightthickness=2)
         self.Facquire.grid(row=3,column=1,sticky='we')
         
         # Saving
-        self.Fanalysis = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fanalysis = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",
+                                  highlightthickness=2)
         self.Fanalysis.grid(row=4,column=1,sticky='we')      
      
         # Plots
-        self.Fplot = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fplot = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",
+                              highlightthickness=2)
         self.Fplot.pack(side='right',fill='both',expand=1)
         
+# Default settings
     def defaultSettings(self):
         self.connectStr.set('470026765')   
         self.connectMode.set(self.connectOptions[2])
-        
-        #self.connectStr.set('192.168.0.177')   
-        #self.connectMode.set(self.connectOptions[0])
         
         self.connectStr.set(defaultIP)   
         self.connectMode.set(self.connectOptions[0])
@@ -421,8 +423,8 @@ class App(tk.Tk):
                  bg='white',justify='left',height=1,bd=0).grid(
                      row=1,column=1,columnspan=1,sticky='w')    
                      
-        c2 = tk.Checkbutton(self.Fanalysis, text='save data to drive',variable=self.doSave, 
-                            onvalue=1, offvalue=0,bg='white').grid(
+        tk.Checkbutton(self.Fanalysis, text='save data to drive',variable=self.doSave, 
+                       onvalue=1, offvalue=0,bg='white').grid(
                                 row=2,column=1,columnspan=1,sticky='w')    
         
                      
@@ -445,10 +447,7 @@ class App(tk.Tk):
                     
         tk.Entry(self.analysistbl,bg='white',justify='center',textvariable=self.dirname,
                  font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
-                     row=2,column=2,columnspan=1,sticky='NSEW')   
-                 
-    
-
+                     row=2,column=2,columnspan=1,sticky='NSEW')     
        
         
     def validNum(self,P):

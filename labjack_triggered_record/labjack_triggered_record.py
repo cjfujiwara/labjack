@@ -28,6 +28,8 @@ import datetime
 from labjack import ljm
 import time
 from threading import Thread
+from threading import Event
+
 import queue
 from matplotlib.dates import DateFormatter
 
@@ -53,7 +55,7 @@ def _from_rgb(rgb):
 #%% Stream Thread 
 
 class stream(Thread):
-    def __init__(self,handle):
+    def __init__(self,handle,evt):
         super().__init__()
         self.handle = handle
         self.goodStream         = True
@@ -78,6 +80,10 @@ class stream(Thread):
         
         self.delay              = None
         self.timeout            = None
+        
+        self.continueAcq       = None
+        self.Foo = evt
+        self.Foo.set()
 
        
     def run(self):
@@ -107,6 +113,11 @@ class stream(Thread):
         t2 = time.time()
         time.sleep(sleepTime + 0.01)
         while (totScans < numscans) & self.goodStream:
+            
+            #print(self.Foo.is_set())
+            if not(self.Foo.is_set()):
+                self.goodStream = False
+                print('Canceling Stream')
 
             try:                
                 ret = ljm.eStreamRead(self.handle) # read data in buffer
@@ -126,7 +137,7 @@ class stream(Thread):
 
             except ljm.LJMError as err:
                 if err.errorCode == ljm.errorcodes.NO_SCANS_RETURNED:  
-                    if ((time.time()-t2)-Tacquire)>self.timeout:
+                    if (((time.time()-t2)-Tacquire)>self.timeout) and self.timeout>0:
                         self.AcqStatus.config(text='ACQUISITION TIMEOUT',fg='red')
                         self.AcqStatus.update()
                         self.goodStream=0
@@ -207,7 +218,13 @@ class App(tk.Tk):
         self.doSave             = tk.IntVar(self)
         self.t                  = np.linspace(0, 300, 301)
         self.y1                 = np.exp(-self.t)
-     
+        
+        
+        self.Foo = Event()
+        #print(self.Foo.is_set())
+        #self.Foo.set()
+        #print(self.Foo.is_set())
+
         self.defaultSettings()        
         self.create_frames()        
         self.create_widgets() 
@@ -293,7 +310,7 @@ class App(tk.Tk):
         self.numscans.set('500')
         self.scansperread.set('500')
         self.delay.set('500')
-        self.timeout.set('30')   
+        self.timeout.set('0')   
 
 
     def create_widgets(self):
@@ -586,8 +603,8 @@ class App(tk.Tk):
             print("Opened a LabJack with Device type: %i, Connection type: %i,\n"
                   "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" %
                   (info[0], info[1], info[2], ljm.numberToIP(info[3]), info[4], info[5]))
-            val = ljm.eReadName(self.handle, self.OutputChannel) 
-            self.output.set(str(np.round(1000*val,1)))
+            #val = ljm.eReadName(self.handle, self.OutputChannel) 
+            #self.output.set(str(np.round(1000*val,1)))
             self.ConnectStatus.config(text='connected',fg='green')
 
             ljm.eWriteName(self.handle,'AIN_ALL_NEGATIVE_CH',ljm.constants.GND)
@@ -623,14 +640,14 @@ class App(tk.Tk):
         self.acqbutt['state']='disabled'
         self.set_state(self.acqtbl,'disabled')
 
-        stream_thread = stream(self.handle)        
+        stream_thread = stream(self.handle,self.Foo)        
         stream_thread.numscans=int(self.numscans.get())
         stream_thread.scanrate=int(self.scanrate.get())
         stream_thread.scansperread=int(self.scansperread.get())
         stream_thread.InputChannels = self.InputChannels
         stream_thread.TriggerChannel = self.TriggerChannel
         stream_thread.delay=int(self.delay.get())
-        stream_thread.timeout=int(self.delay.get())
+        stream_thread.timeout=int(self.timeout.get())
 
         stream_thread.AcqStatus=self.AcqStatus        
         
@@ -650,7 +667,7 @@ class App(tk.Tk):
 
         
     def doTrigAcq(self):           
-        stream_thread = stream(self.handle)            
+        stream_thread = stream(self.handle,self.Foo)            
         stream_thread.numscans=int(self.numscans.get())
         stream_thread.scanrate=int(self.scanrate.get())
         stream_thread.scansperread=int(self.scansperread.get())
@@ -665,14 +682,17 @@ class App(tk.Tk):
             
     def stopacq(self):
         self.doAutoAcq = False
-        self.doLock = False        
+        self.doLock = False   
+        self.Foo.clear()
    
     def update(self): 
-        self.p1.set_data(self.t,self.y1)        
+        self.p1.set_data(self.t,self.y1)     
+        self.ax1.relim()
         self.ax1.set_xlim(0,np.amax(self.t))
-        self.ax1.set_ylim(-100,8000)        
-        self.canvas.draw()           
-        self.saveData()    
+        #self.ax1.set_ylim(-100,8000)   
+        self.canvas.draw()        
+        if self.doSave:
+            self.saveData()    
 
     # Save data to file
     def saveData(self):

@@ -1,7 +1,7 @@
 # labjackCurrentMonitor.py
 #
 # Author : C Fujiwara
-#
+#d
 # This code runs a GUI which allows for monitoring of the transport currents 
 # a labjack T7.  In the laboratory we have current monitors which output a 
 # voltage proportional to the current.  The ADCs on a T7 pro are 16bit on a 

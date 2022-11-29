@@ -1,18 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep 20 19:16:53 2022
-
-@author: Sephora
-"""
-
 # newfocus control
 #
 # Author : C Fujiwara
 #
-# This code runs a GUI which allows for monitoring of the transport currents 
-# a labjack T7.  In the laboratory we have current monitors which output a 
-# voltage proportional to the current.  The ADCs on a T7 pro are 16bit on a 
-# range of +-10V.
 #
 # For information regarding installation of labjack packages, see the readme
 # associated with this python script.
@@ -42,10 +31,8 @@ from time import strftime
 #from matplotlib.figure import Figure
 import numpy as np
 import threading
-#from matplotlib.backends.backend_tkagg import (
- #   FigureCanvasTkAgg)
+
 import tkinter as tk
-#import scipy.io
 import time
 import csv
 
@@ -70,9 +57,8 @@ ljm.eWriteName(t7,"DAC0",2.5)
 
    
 wm = wavemeter.WM(publish=False)
-print('test')
-f = wm.read_frequency(3)
-print('test2')
+
+f = wm.read_frequency(4)
 f0 = 391016.296
 
 print(f)
@@ -307,78 +293,77 @@ time.sleep(2)
 
 c = .6 # GHz/V
 while 1:
-    now = datetime.now()
-    dt_string = now.strftime('%Y/%m/%d %H:%M:%S')    
-    f = wm.read_frequency(3)
-    
-    v_piezo = inst.query(":sour:volt:piez?")
-    v_piezo = v_piezo.strip()
-    v_piezo = v_piezo.replace("V","")
-    v_piezo = float(v_piezo) 
-    
-    #print(v_piezo)
-    
-    # Read in request frequency
-    with open('Y:\wavemeter_amar\lock_freq.txt') as file:
-        line = file.readline()    
-    f_req = float(line)
-    
-    
-    if isinstance(f,str):
-        print(f)
-    else:     
+    try : 
+        now = datetime.now()
+        dt_string = now.strftime('%Y/%m/%d %H:%M:%S')    
+        f = wm.read_frequency(4)
         
-        freq_err = f-f_req        
-        detuning = f-f0
+        v_piezo = inst.query(":sour:volt:piez?")
+        v_piezo = v_piezo.strip()
+        v_piezo = v_piezo.replace("V","")
+        v_piezo = float(v_piezo) 
         
-        data = [dt_string,f_req,f,freq_err,detuning,v_piezo,v0]    
-        doLog(data)
+        #print(v_piezo)
+        
+        # Read in request frequency
+        with open('Y:\wavemeter_amar\lock_freq.txt') as file:
+            line = file.readline()    
+        
+        
+        if isinstance(f,str):
+            print(f)
+        else:     
+            f_req = float(line)
 
-        print(data)
-        
-        if abs(freq_err)>.001:
+            freq_err = f-f_req        
+            detuning = f-f0
             
-            stp = stp0
+            data = [dt_string,f_req,f,freq_err,detuning,v_piezo,v0]    
+            doLog(data)
+    
+            print(data)
+            
+            if abs(freq_err)>.001:
+                
+                stp = stp0
+                        
+                if abs(freq_err)>.005 :
+                    stp = np.round(abs(freq_err)/c*1000*.8)                
+                
+                if freq_err>0:
+                    v0new  = v0-stp
+                else:
+                    v0new = v0+stp
                     
-            if abs(freq_err)>.005 :
-                stp = np.round(abs(freq_err)/c*1000*.8)                
-            
-            if freq_err>0:
-                v0new  = v0-stp
-            else:
-                v0new = v0+stp
                 
+                if v0new>4500 :     
+                    v_piezo_new = v_piezo + 2
+                    cmd = ':SOUR:VOLT:PIEZ ' + str(v_piezo_new)
+                    #print(cmd)
+                    inst.write(cmd)
+                    v0new = v0new - 2000
+                    #time.sleep(1)
+                    #print('incrase piezo by 500 mV')
+                    
+                if v0new < 100 :   
+                    v_piezo_new = v_piezo - 2
+                    cmd = ':SOUR:VOLT:PIEZ ' + str(v_piezo_new)
+                    #print(cmd)
+                    inst.write(cmd)
+                    v0new = v0new + 2000
+                    #time.sleep(1)       
+                    #print('decrease piezo by 500 mV')
+    
             
-            if v0new>4500 :     
-                v_piezo_new = v_piezo + 2
-                cmd = ':SOUR:VOLT:PIEZ ' + str(v_piezo_new)
-                #print(cmd)
-                inst.write(cmd)
-                v0new = v0new - 2000
-                #time.sleep(1)
-                #print('incrase piezo by 500 mV')
-                
-            if v0new < 100 :   
-                v_piezo_new = v_piezo - 2
-                cmd = ':SOUR:VOLT:PIEZ ' + str(v_piezo_new)
-                #print(cmd)
-                inst.write(cmd)
-                v0new = v0new + 2000
-                #time.sleep(1)       
-                #print('decrease piezo by 500 mV')
+                if v0new < 4500 and v0new>=0:
+                    v0 = v0new
+                    ljm.eWriteName(t7,"DAC0",v0new/1000)  
 
-        
-            if v0new < 4500 and v0new>=0:
-                v0 = v0new
-                ljm.eWriteName(t7,"DAC0",v0new/1000)  
-                
-            #time.sleep(1)          
-        
-        with open(r"kd2lock_check.csv", 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(data)
-        
-    time.sleep(1)
+            
+        time.sleep(1)
+    except :
+        print('oh no an error occured')
+
     
 print("Closing the labjack ... ") 
 ljm.close(t7)

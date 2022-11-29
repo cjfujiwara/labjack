@@ -37,30 +37,25 @@ import time
 import csv
 
 # Labckjack configuration
-t7name="CurrentMonitor"
 myip="192.168.1.125"
 
-#handle=ljm.openS("T7","ETHERNET",'470026765')
-
+# Open the labjack connection
 t7=ljm.openS("T7","ETHERNET",myip)
 info = ljm.getHandleInfo(t7)
 print("Opened a LabJack with Device type: %i, Connection type: %i,\n"
       "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" %
       (info[0], info[1], info[2], ljm.numberToIP(info[3]), info[4], info[5]))
  
+# On connection write the DAC output (why?)
 numFrames = 1
 names = ["DAC0"]
-aValues = [2.5]  # [2.5 V, 12345]
-#ljm.eWriteNames(t7, numFrames, names, aValues)
-
+aValues = [2.5]  
 ljm.eWriteName(t7,"DAC0",2.5)
 
-   
+# Read in initial wavemeter reading
 wm = wavemeter.WM(publish=False)
-
 f = wm.read_frequency(4)
 f0 = 391016.296
-
 print(f)
 
 import pyvisa
@@ -69,63 +64,6 @@ rm.list_resources()
 inst = rm.open_resource('GPIB0::1::INSTR')
 print(inst.query("*IDN?"))
 
-class vortex_controller(Thread):
-    def __init__(self,instrument):
-        super().__init__()
-        self.instrument = instrument
-        
-        self.CurrentSense = 0
-        self.CurrentSet = 0
-        self.VoltageSense = 0
-        self.VoltageSet = 0
-        
-    def run(self):
-        self.AcqStatus.config(text='acquiring ... ',fg='green')
-        self.AcqStatus.update()  
-
-
-class App(tk.Tk):
-    def __init__(self):        
-        # Create the GUI object
-        super().__init__()
-        self.title('Vortex Controller')
-        self.geometry("1280x780")
-        
-    def create_frames(self):
-        self.Fopt = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fopt.pack(side='left',anchor='nw',fill='y')
-        
-        # Connect Frame
-        self.Fconnect = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fconnect.grid(row=1,column=1,sticky='we')
-        
-        # Voltage output
-        self.Foutput = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Foutput.grid(row=2,column=1,sticky='we')
-        
-        # Acquisition
-        self.Facquire = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Facquire.grid(row=3,column=1,sticky='we')
-        
-        # Peak Analysis Settings
-        self.Fpeak = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fpeak.grid(row=4,column=1,sticky='we')
-        
-        # Peak Analysis Output
-        self.Fpeakout = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fpeakout.grid(row=5,column=1,sticky='we')
-        
-        # Lock Settings
-        self.Flock = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Flock.grid(row=6,column=1,sticky='we')
-        
-        # Plots
-        self.Fplot = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fplot.pack(side='right',fill='both',expand=1)
-        
-    def on_closing(self):
-        #self.disconnect()
-        self.destroy()
 
 
 """

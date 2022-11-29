@@ -518,37 +518,27 @@ class App(tk.Tk):
         tk.Label(self.Fplot,text='Plots',font=(font_name_lbl,"12"),
                  bg='white',justify='left',height=1,bd=0).pack(side='top',anchor='nw')                    
 
+        # Create graphical object
         self.fig = Figure()
         self.fig.autofmt_xdate()
         #gs = GridSpec(1, 1, figure=self.fig)        
         #self.ax1 = self.fig.add_subplot(gs[:-1, :])
-        self.ax1 = self.fig.add_subplot()
-        
-        
+        self.ax1 = self.fig.add_subplot()      
         self.ax1.set_ylabel("voltage (mV)",color='black')
         self.ax1.set_xlabel("time (ms)")
         self.p1, = self.ax1.plot(self.t,self.y1,color='black')
-        self.ax1.set_xlim([0,300])
-        
-        self.ax1.grid(True)
-        
-       
-        self.ax1.tick_params(axis='y', labelcolor='black')        
- 
-
+        self.ax1.set_xlim([0,300])        
+        self.ax1.grid(True)       
+        self.ax1.tick_params(axis='y', labelcolor='black')   
         self.fig.tight_layout()
         
-        
-        # creating the Tkinter canvas
-        # containing the Matplotlib figure
+        # make the figure and the canvas
         self.canvas = FigureCanvasTkAgg(self.fig,master = self.Fplot)  
-        self.canvas.draw()
-          
-        # placing the canvas on the Tkinter window
+        self.canvas.draw()          
         self.canvas.get_tk_widget().pack(side='top',fill='both',expand=True)
         
 
-             
+    # Set the timeouts
     def configLJM(self):
         ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
                                 ljm.constants.STREAM_SCANS_RETURN_ALL_OR_NONE)
@@ -557,7 +547,7 @@ class App(tk.Tk):
         ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 0)  
         #ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 30)  
 
-
+    # Configure hardware trigger for desired application
     def configTrig(self):
         address = ljm.nameToAddress(self.TriggerChannel)[0]
         ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", address);
@@ -565,21 +555,21 @@ class App(tk.Tk):
         # Clear any previous settings on triggerName's Extended Feature registers
         ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 0);
     
-        # 5 enables a rising or falling edge to trigger stream
-        #ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 4);
-        #ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 1);
-        
+        # For trigger settings, see the labjack manual.  Here we chose to 
+        # this using the conditional reset        
         ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 12);   # conditional reset
-        ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 1);    # 1 is rising 0 is falling   
-        ljm.eWriteName(self.handle, "%s_EF_CONFIG_B" % self.TriggerChannel, 1);       # number of triggers to reset
+        ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 1); # 1 is rising 0 is falling   
+        ljm.eWriteName(self.handle, "%s_EF_CONFIG_B" % self.TriggerChannel, 1); # number of triggers to reset
 
 
         # Enable
         ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 1);
         
+    # Configure trigger to be manual
     def configMan(self):
         ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", 0);
         
+    # Connect to the labjack
     def connect(self):
         try:
             if self.connectMode.get()==self.connectOptions[0]:
@@ -601,8 +591,7 @@ class App(tk.Tk):
             self.isConnected = False
             print('oh no')
             
-        if self.isConnected:
-            
+        if self.isConnected:            
             try:
                 ljm.eStreamStop(self.handle)   
             except:
@@ -626,7 +615,7 @@ class App(tk.Tk):
             self.b1['state']='disabled'
             self.b2['state']='normal'
 
-
+    # Disconnect from the labjack
     def disconnect(self):
         if self.isConnected:
             print('disconnecting from labjack')
@@ -637,7 +626,7 @@ class App(tk.Tk):
             self.b2['state']='disabled'
 
 
-        
+    # Force acquisition callback        
     def forceacq(self):
         self.doAutoAcq = False
         self.configMan()
@@ -646,7 +635,6 @@ class App(tk.Tk):
         self.forcebutt['state']='disabled'
         self.acqbutt['state']='disabled'
         self.set_state(self.acqtbl,'disabled')
-        #self.set_state(self.Fpeak,'disabled')
 
         stream_thread = stream(self.handle)        
         stream_thread.numscans=int(self.numscans.get())
@@ -696,24 +684,19 @@ class App(tk.Tk):
         self.p1.set_data(self.t,self.y1)        
         self.ax1.set_xlim(0,np.amax(self.t))
         self.ax1.set_ylim(-100,8000)        
-        self.canvas.draw()   
-        
-        self.saveData()
-        
-       # arr = numpy.arange(9) # 1d array of 9 numbers
-#arr = arr.reshape((3, 3))  # 2d array of 3x3
+        self.canvas.draw()           
+        self.saveData()    
 
-#scipy.io.savemat('c:/tmp/arrdata.mat', mdict={'arr': arr})
-
+    # Save data to file
     def saveData(self):
-        fname,dstr = self.getLogName()       
-   
+        fname,dstr = self.getLogName()          
         print('saving data to ' + fname)
         scipy.io.savemat(fname,{"t": self.t, "y": self.y1, 
                                 "t_unit": "ms", 
                                 "y_unit": "mV",
                                 "date": dstr})
         
+    # Get the file name that this should save to
     def getLogName(self):
         tnow=datetime.datetime.now();
         
@@ -739,8 +722,8 @@ class App(tk.Tk):
         
         # Filename
         fname = os.path.join(dir_day,fname0)
-        print(dir_year)
-        
+
+        # Make the directories if they don't exist yet        
         if not(os.path.isdir(f0)):
             os.mkdir(f0)
         
@@ -756,11 +739,10 @@ class App(tk.Tk):
             
         return fname, dstr
             
+    # On close make sure to disconnect from the labjack
     def on_closing(self):
         self.disconnect()
-        self.destroy()
-
-                
+        self.destroy()                
 
 
 #%% Main Loop

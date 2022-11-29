@@ -58,14 +58,17 @@ f = wm.read_frequency(4)
 f0 = 391016.296
 print(f)
 
+# Connect to vortex controller over GPIB
 import pyvisa
 rm = pyvisa.ResourceManager()
 rm.list_resources()
 inst = rm.open_resource('GPIB0::1::INSTR')
 print(inst.query("*IDN?"))
 
+# Note that in order to change the diode temperature you must connect over RS232
 
 
+# This portion of code was used to calibrate the voltage control
 """
 start=0
 step=1
@@ -115,6 +118,8 @@ for j in range(len(valsSet)):
 #     app.mainloop()    
    """
    
+   
+# This portion of code was used to calibrate the current control
 """
 start=50
 step=.5
@@ -210,44 +215,48 @@ def doLog(data):
             writer.writerow(fields)  
             writer.writerow(data)           
             
+#====================================================================
+# Main Loop
+#====================================================================            
 
+# Fields that are saved for CSV logging
 fields=['time','request','read','error','detuning','peizo_set','labjack']
 
-
-# Read this frequecny
-f0 = 391016.296
+# Deinfe the reosnant frequency to be the B=0 G field from the F=9/2 to F'=11/2 state
 f0 = 391016.821
 
+# Initialize stuf
 delta0=-40.8
-
 I0 = 50.5
-
-
 v0 = 4000
 stp0 = 1
 ljm.eWriteName(t7,"DAC0",v0/1000)
 
+# Wait a moment for the systme to become stable
 time.sleep(2)
 
+# Response of the frequency to voltage; calibrated previously
 c = .6 # GHz/V
+
+# The main loop
 while 1:
     try : 
+        # Read the date
         now = datetime.now()
         dt_string = now.strftime('%Y/%m/%d %H:%M:%S')    
         f = wm.read_frequency(4)
         
+        # Read the piezo voltage
         v_piezo = inst.query(":sour:volt:piez?")
         v_piezo = v_piezo.strip()
         v_piezo = v_piezo.replace("V","")
-        v_piezo = float(v_piezo) 
+        v_piezo = float(v_piezo)         
         
-        #print(v_piezo)
-        
-        # Read in request frequency
+        # Read in request frequency from file
         with open('Y:\wavemeter_amar\lock_freq.txt') as file:
             line = file.readline()    
         
-        
+        # If the frequency is a string (ie bad read); print it
         if isinstance(f,str):
             print(f)
         else:     

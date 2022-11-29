@@ -133,7 +133,6 @@ class stream(Thread):
                     sys.stdout.flush()
                     continue
                 else: 
-                    print('hi')
                     ljme = sys.exc_info()[1]
                     print(ljme)
                     self.goodStream=False  
@@ -201,10 +200,10 @@ class App(tk.Tk):
         self.connectStr         = tk.StringVar(self)    # Connect String            
 
         self.scanrate           = tk.StringVar(self)    # Scan Rate 
-        self.numscans           = tk.StringVar(self)    # Output Voltage
-        self.scansperread       = tk.StringVar(self)    # Output Voltage Max 
-        self.delay              = tk.StringVar(self)    # Output Voltage Min 
-        self.timeout            = tk.StringVar(self)    # Output Voltage Min 
+        self.numscans           = tk.StringVar(self)    # Number of scans
+        self.scansperread       = tk.StringVar(self)    # Scans per read 
+        self.delay              = tk.StringVar(self)    # Delay after acquisition 
+        self.timeout            = tk.StringVar(self)    # Timeout of measurement
         self.doSave             = tk.IntVar(self)
         self.t                  = np.linspace(0, 300, 301)
         self.y1                 = np.exp(-self.t)
@@ -213,19 +212,18 @@ class App(tk.Tk):
         self.create_frames()        
         self.create_widgets() 
         self.create_plots()                   
-        
+        self.set_state(self.FacqButt,'disabled')
+
     # Process the resultant stream
     def process_stream(self, thread):
         if thread.is_alive():
             self.after(100, lambda: self.process_stream(thread))
 
         else:
-            #self.AcqStatus.config(text=thread.Status,fg=thread.StatusColor)
                 
             if thread.goodStream:
                 self.t = thread.t
                 self.y1 = thread.y1
-                #self.y2 = thread.y2
                 self.lastAcquisition = thread.lastacquisition                
                 self.update()
                 
@@ -286,10 +284,7 @@ class App(tk.Tk):
         self.connectStr.set(defaultIP)   
         self.connectMode.set(self.connectOptions[0])
         
-        # Output voltage default values
-        self.output.set('??')
-        self.outputMax.set('2500')
-        self.outputMin.set('0')    
+        # Output voltage default values 
         self.dirname.set(r'PA')
         self.root.set(r'Y:\LabjackScope')
         self.doSave.set(1)
@@ -298,17 +293,8 @@ class App(tk.Tk):
         self.numscans.set('500')
         self.scansperread.set('500')
         self.delay.set('500')
-        self.timeout.set('30')
+        self.timeout.set('30')   
 
-    
-        
-    def set_output_state(self,state):
-        self.bDa['state'] = state
-        self.bDb['state'] = state
-        self.bDc['state'] = state
-        self.bDd['state'] = state
-        self.bDe['state'] = state
-        self.bDf['state'] = state
 
     def create_widgets(self):
         # Connect Label
@@ -323,12 +309,12 @@ class App(tk.Tk):
         # Help Button
         tk.Button(self.Fconnect,text='help',font=(font_name,"10"),
                   width=6,bd=3).grid(row=3,column=1)        
-        # Connect
+        # Connect Button
         self.b1=tk.Button(self.Fconnect,text="connect",bg=_from_rgb((80, 200, 120)),
                   font=(font_name,"10"),width=11,bd=3,command=self.connect)
         self.b1.grid(row=3,column=2,sticky='EW')   
         
-        # Disconnect
+        # Disconnect Button
         self.b2=tk.Button(self.Fconnect,text="disconnect",bg=_from_rgb((255, 102, 120)),
                   font=(font_name,"10"),width=11,bd=3,command=self.disconnect,state='disabled')
         self.b2.grid(row = 3, column=3,sticky='NSEW')
@@ -336,6 +322,7 @@ class App(tk.Tk):
         # Connect options       
         tk.OptionMenu(self.Fconnect, self.connectMode, *self.connectOptions).grid(
             row=4,column=1,columnspan=3,sticky='NSEW')  
+        
         # Connect string
         tk.Entry(self.Fconnect,bg='white',textvariable=self.connectStr,
                  font=(font_name,"10"),justify='center').grid(row=5,column=1,columnspan=3,sticky='NSEW')  
@@ -425,8 +412,7 @@ class App(tk.Tk):
                      
         tk.Checkbutton(self.Fanalysis, text='save data to drive',variable=self.doSave, 
                        onvalue=1, offvalue=0,bg='white').grid(
-                                row=2,column=1,columnspan=1,sticky='w')    
-        
+                                row=2,column=1,columnspan=1,sticky='w')           
                      
               
         self.analysistbl = tk.Frame(self.Fanalysis,bd=1,bg="white",highlightbackground="grey",
@@ -613,6 +599,8 @@ class App(tk.Tk):
             ljm.eWriteName(self.handle, "STREAM_CLOCK_SOURCE", 0)    # Internal clock stream
             self.b1['state']='disabled'
             self.b2['state']='normal'
+            self.set_state(self.FacqButt,'normal')
+
 
     # Disconnect from the labjack
     def disconnect(self):
@@ -623,7 +611,7 @@ class App(tk.Tk):
             self.ConnectStatus.config(text='disconnected',fg='red')
             self.b1['state']='normal'
             self.b2['state']='disabled'
-
+            self.set_state(self.FacqButt,'disabled')
 
     # Force acquisition callback        
     def forceacq(self):

@@ -687,9 +687,9 @@ class App(tk.Tk):
    
     def update(self): 
         self.p1.set_data(self.t,self.y1)     
-        self.ax1.relim()
+        #self.ax1.relim()
         self.ax1.set_xlim(0,np.amax(self.t))
-        #self.ax1.set_ylim(-100,8000)   
+        self.ax1.set_ylim(min(self.y1)-100,max(self.y1)+100)   
         self.canvas.draw()        
         if self.doSave:
             self.saveData()    

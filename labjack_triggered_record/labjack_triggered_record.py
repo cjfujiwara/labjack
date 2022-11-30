@@ -216,6 +216,10 @@ class App(tk.Tk):
         self.delay              = tk.StringVar(self)    # Delay after acquisition 
         self.timeout            = tk.StringVar(self)    # Timeout of measurement
         self.doSave             = tk.IntVar(self)
+        
+        self.doSource           = tk.IntVar(self)
+        self.controlfile        = tk.StringVar(self)
+
         self.t                  = np.linspace(0, 300, 301)
         self.y1                 = np.exp(-self.t)
         
@@ -287,6 +291,11 @@ class App(tk.Tk):
         self.Fanalysis = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",
                                   highlightthickness=2)
         self.Fanalysis.grid(row=4,column=1,sticky='we')      
+        
+        # Sequence Params Source
+        self.FSeq = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",
+                                  highlightthickness=2)
+        self.FSeq.grid(row=5,column=1,sticky='we')    
      
         # Plots
         self.Fplot = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",
@@ -311,6 +320,8 @@ class App(tk.Tk):
         self.scansperread.set('500')
         self.delay.set('500')
         self.timeout.set('0')   
+        self.controlfile.set(r'Y:\_communication\control2.mat')   
+        self.doSource.set(1)
 
 
     def create_widgets(self):
@@ -422,7 +433,7 @@ class App(tk.Tk):
                  font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
                      row=5,column=2,columnspan=1,sticky='w')  
                      
-        # Acquisition Settings
+        # Analysis Settings
         tk.Label(self.Fanalysis,text='Analysis',font=(font_name_lbl,"12"),
                  bg='white',justify='left',height=1,bd=0).grid(
                      row=1,column=1,columnspan=1,sticky='w')    
@@ -450,8 +461,32 @@ class App(tk.Tk):
                     
         tk.Entry(self.analysistbl,bg='white',justify='center',textvariable=self.dirname,
                  font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
-                     row=2,column=2,columnspan=1,sticky='NSEW')     
-       
+                     row=2,column=2,columnspan=1,sticky='NSEW')   
+                    
+        tk.Label(self.Fanalysis,text='Analysis',font=(font_name_lbl,"12"),
+                 bg='white',justify='left',height=1,bd=0).grid(
+                     row=1,column=1,columnspan=1,sticky='w')    
+                   
+        # Sequence File Source
+        tk.Label(self.FSeq,text='Sequence',font=(font_name_lbl,"12"),
+                 bg='white',justify='left',height=1,bd=0).grid(
+                     row=1,column=1,columnspan=1,sticky='w')  
+                     
+                                          
+        tk.Checkbutton(self.FSeq, text='link to source file',variable=self.doSource, 
+                       onvalue=1, offvalue=0,bg='white').grid(
+                                row=2,column=1,columnspan=1,sticky='w')          
+                     
+        
+ 
+        tk.Entry(self.FSeq,bg='white',justify='center',textvariable=self.controlfile,
+                 font=(font_name,"10"),width=30).grid(
+                     row=3,column=1,columnspan=1,sticky='NSEW')               
+                     
+   
+ 
+                             
+          
         
     def validNum(self,P):
         if P.isnumeric():
@@ -690,19 +725,44 @@ class App(tk.Tk):
         #self.ax1.relim()
         self.ax1.set_xlim(0,np.amax(self.t))
         self.ax1.set_ylim(min(self.y1)-100,max(self.y1)+100)   
-        self.canvas.draw()        
+        self.canvas.draw()  
+        
+        if self.doSource:
+            self.grabSequenceDate()
+
+            
+        
         if self.doSave:
             self.saveData()    
 
+    def grabSequenceDate(self):
+        fname = self.controlfile
+        b = scipy.io.loadmat(fname)        
+        matlab_datestr = b['vals']['ExecutionDateStr'][0][0][0]
+        matlab_datenum = b['vals']['ExecutionDate'][0][0][0][0]
+                
+        self.SequenceExecutionDate = matlab_datenum
+        self.SequenceExecutionDateStr = matlab_datestr
+        
+        
+        
     # Save data to file
     def saveData(self):
         fname,dstr = self.getLogName()          
         print('saving data to ' + fname)
-        scipy.io.savemat(fname,{"t": self.t, "y": self.y1, 
-                                "t_unit": "ms", 
-                                "y_unit": "mV",
-                                "date": dstr})
         
+        if self.doSource :
+            scipy.io.savemat(fname,{"t": self.t, "y": self.y1, 
+                                    "t_unit": "ms", 
+                                    "y_unit": "mV",
+                                    "date": dstr,
+                                    "ExecutionDate": self.SequenceExecutionDate,
+                                    "ExecutionDateStr": self.SequenceExecutionDateStr})
+        else:
+            scipy.io.savemat(fname,{"t": self.t, "y": self.y1, 
+                                    "t_unit": "ms", 
+                                    "y_unit": "mV",
+                                    "date": dstr})
     # Get the file name that this should save to
     def getLogName(self):
         tnow=datetime.datetime.now();

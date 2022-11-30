@@ -749,9 +749,17 @@ class App(tk.Tk):
     # Save data to file
     def saveData(self):
         fname,dstr = self.getLogName()          
+        
+        
         print('saving data to ' + fname)
         
         if self.doSource :
+            
+            
+            fmt = '%d-%b-%Y %H:%M:%S'
+            tseq = datetime.datetime.strptime(self.ExecutionDateStr,fmt)
+            fname = tseq.strftime("%Y-%m-%d_%H-%M-%S") + '.mat'
+            
             scipy.io.savemat(fname,{"t": self.t, "y": self.y1, 
                                     "t_unit": "ms", 
                                     "y_unit": "mV",

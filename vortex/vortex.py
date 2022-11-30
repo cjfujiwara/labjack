@@ -260,8 +260,10 @@ while 1:
         if isinstance(f,str):
             print(f)
         else:     
+            # Make sure it is a number
             f_req = float(line)
 
+            # Measure the 
             freq_err = f-f_req        
             detuning = f-f0
             

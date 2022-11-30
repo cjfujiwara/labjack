@@ -473,7 +473,7 @@ class App(tk.Tk):
                      row=1,column=1,columnspan=1,sticky='w')  
                      
                                           
-        tk.Checkbutton(self.FSeq, text='link to source file',variable=self.doSource, 
+        tk.Checkbutton(self.FSeq, text='use source file date',variable=self.doSource, 
                        onvalue=1, offvalue=0,bg='white').grid(
                                 row=2,column=1,columnspan=1,sticky='w')          
                      
@@ -736,7 +736,7 @@ class App(tk.Tk):
             self.saveData()    
 
     def grabSequenceDate(self):
-        fname = self.controlfile
+        fname = self.controlfile.get()
         b = scipy.io.loadmat(fname)        
         matlab_datestr = b['vals']['ExecutionDateStr'][0][0][0]
         matlab_datenum = b['vals']['ExecutionDate'][0][0][0][0]
@@ -751,15 +751,8 @@ class App(tk.Tk):
         fname,dstr = self.getLogName()          
         
         
-        print('saving data to ' + fname)
         
-        if self.doSource :
-            
-            
-            fmt = '%d-%b-%Y %H:%M:%S'
-            tseq = datetime.datetime.strptime(self.ExecutionDateStr,fmt)
-            fname = tseq.strftime("%Y-%m-%d_%H-%M-%S") + '.mat'
-            
+        if self.doSource :                
             scipy.io.savemat(fname,{"t": self.t, "y": self.y1, 
                                     "t_unit": "ms", 
                                     "y_unit": "mV",
@@ -771,9 +764,17 @@ class App(tk.Tk):
                                     "t_unit": "ms", 
                                     "y_unit": "mV",
                                     "date": dstr})
+            
+        print('data saved to ' + fname)
+
     # Get the file name that this should save to
     def getLogName(self):
         tnow=datetime.datetime.now();
+        
+        if self.doSource:
+            fmt = '%d-%b-%Y %H:%M:%S'
+            tnow = datetime.datetime.strptime(self.SequenceExecutionDateStr,fmt) 
+            
         
         y=tnow.year
         m='%02d' % tnow.month

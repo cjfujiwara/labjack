@@ -44,7 +44,7 @@ import scipy.io
 
 # Labckjack configuration
 t7name="CurrentMonitor"
-myip="192.168.1.124"
+myip="192.168.1.180"
 
 # Digital trigger channel
 TRIGGER_NAME='DIO0' # aka DIO0, must be DIO0 or DIO1 for triggered stream
@@ -52,13 +52,13 @@ TRIGGER_NAME='DIO0' # aka DIO0, must be DIO0 or DIO1 for triggered stream
 # Analog channels to measure
 aScanListNames = ["AIN0", "AIN1","AIN2","AIN3","AIN120","AIN121","AIN122",
                   "AIN123","AIN124","AIN125","AIN126","AIN127",
-                  "AIN48","AIN49","AIN50","AIN51","AIN52"]  
+                  "AIN48","AIN49","AIN50","AIN51","AIN52"] 
 numAddresses = len(aScanListNames)
 
 # Names for each analog channel
 names = ["Push","MOT","Coil 3","Coil 4","Coil 5","Coil 6","Coil 7",
          "Coil 8","Coil 9","Coil 10","Coil 11","Coil 12A",
-         "Coil 12B","Coil 13","Coil 14","Coil 15","QP Coils"]
+         "Coil 12B","Coil 13","Coil 14","Coil 15","Coil 16"]
          
 # ONLY ONE         
 # Analog channels to measure
@@ -340,16 +340,19 @@ def burstStream(handle,isTrig):
             
             # Increment read counter    
             i += 1
+            print('boop1')
         except ljm.LJMError as err:
             if err.errorCode == ljm.errorcodes.NO_SCANS_RETURNED:     
                 #sys.stdout.write('.')
                 sys.stdout.flush()
                 continue
             else: 
+                print("boop")
                 ljme = sys.exc_info()[1]
                 print(ljme)
                 isGood=False  
     lbl2.config(text="Data acquired. Closing data stream",bg="yellow")
+    print('beeboo')
 
     # Update acquisition    
     global tAcq

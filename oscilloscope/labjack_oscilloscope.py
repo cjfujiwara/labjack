@@ -1,16 +1,10 @@
-# labjack_cavity_gui.py
+# currentmonitor.py
 # Author  : C Fujiwara
-# Created : 2021.12.10
-# Last Edit : (see GitHub)
+# Created : 2023.07.31
 #
 # This GUI is used to run a labjack T7 as an oscilloscope for monitoring and 
-# a spectrum from a Fabry-Perot Interferometer.  Using a reference laser
-# as a source for peaks, it locks the separation between two peaks.
-#
-# This code was written as Cora's first real forray into GUI programming for 
-# python using the tkinter packages.  I also only have a vague understanding
-# of matplotlib as well. So this code could be optimized further. My primary
-# coding expertise is from MATLAB.
+# multiple channels for our experiment
+
 #
 # READ ABOUT STRING VAR
 #https://www.pythontutorial.net/tkinter/tkinter-stringvar/
@@ -23,6 +17,14 @@ font_name_lbl = 'arial narrow bold'
 
 # tkinter is the main GUI package
 import tkinter as tk
+
+from tkinter import filedialog 
+
+import os 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+# Configuration File Opener
+import json
 
 # Import packages
 import sys
@@ -181,7 +183,7 @@ class App(tk.Tk):
     def __init__(self):        
         # Create the GUI object
         super().__init__()
-        self.title('Labjack Cavity')
+        self.title('Labjack Oscilloscope')
         self.geometry("1280x780")
         
         self.connectOptions = [
@@ -195,9 +197,13 @@ class App(tk.Tk):
         self.isConnected = False
         self.TriggerChannel = "DIO0"
         self.InputChannels = ["AIN0", "AIN1"]
+        self.InputNames = ["AIN0","AIN1"]
         self.OutputChannel = "DAC0"
-
-        self.autoTrack = tk.IntVar(self)
+        
+        self.doSave = 0
+        self.doAdwin = 0
+        
+        self.SaveRoot = tk.StringVar(self)
 
         self.connectMode = tk.StringVar(self)   # Connect Mode
         self.connectStr = tk.StringVar(self)    # Connect String    
@@ -211,39 +217,15 @@ class App(tk.Tk):
         self.scansperread = tk.StringVar(self)  # Output Voltage Max 
         self.delay = tk.StringVar(self)         # Output Voltage Min 
 
-        self.tstart = tk.StringVar(self)        # Tstart
-        self.tend = tk.StringVar(self)          # T end
-        self.minpeak = tk.StringVar(self)       # Minimum Peak Height
-        self.FSR = tk.StringVar(self)           # Minimum Peak Height
-
-        self.FSRtime = tk.StringVar(self)       # Tstart
-        self.dT = tk.StringVar(self)            # T end
-        self.dF = tk.StringVar(self)            # Minimum Peak Height
-
-        self.dFset = tk.StringVar(self)         # Tstart
-        self.hys = tk.StringVar(self)           # T end
-        self.dV = tk.StringVar(self)            # Minimum Peak Height  
-        
         self.t = np.linspace(0, 300, 301)
         self.y1 = np.exp(-self.t)
         self.y2 = np.sin(2 * np.pi * self.t/50)
-                
-        self.doAutoAcq = False
-        self.doLock = False
-        
-        self.tHis=[]
-        self.vHis=[]
-        self.nHis=400
-        self.dfHis=[]
         
         self.defaultSettings()        
         self.create_frames()        
         self.create_widgets() 
         self.create_plots()
-        
-        self.set_state(self.Foutput,'disabled')
-        self.set_state(self.FacqButt,'disabled')
-        self.set_state(self.FlockButt,'disabled')
+
         
             
         
@@ -280,9 +262,9 @@ class App(tk.Tk):
             else:
                 self.set_state(child,mystate)
     
-    def create_frames(self):
+    def create_frames(self):        
         self.Fopt = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fopt.pack(side='left',anchor='nw',fill='y')
+        self.Fopt.pack(side='left',anchor='nw',fill='y')      
         
         # Connect Frame
         self.Fconnect = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
@@ -294,24 +276,25 @@ class App(tk.Tk):
         
         # Acquisition
         self.Facquire = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Facquire.grid(row=3,column=1,sticky='we')
+        self.Facquire.grid(row=3,column=1,sticky='we')        
         
-        # Peak Analysis Settings
-        self.Fpeak = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fpeak.grid(row=4,column=1,sticky='we')
+        # Right Frame
+        self.Fright = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fright.pack(side='right',fill='both',expand=1)
         
-        # Peak Analysis Output
-        self.Fpeakout = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fpeakout.grid(row=5,column=1,sticky='we')
+        # Config File
+        self.Fconfig = tk.Frame(self.Fright,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fconfig.pack(side='top',fill='x',expand=0)        
         
-        # Lock Settings
-        self.Flock = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Flock.grid(row=6,column=1,sticky='we')
-        
+        # Saving
+        self.Fsave = tk.Frame(self.Fright,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fsave.pack(side='top',fill='x',expand=0)              
+       
         # Plots
-        self.Fplot = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fplot.pack(side='right',fill='both',expand=1)
-        
+        self.Fplot = tk.Frame(self.Fright,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
+        self.Fplot.pack(side='bottom',fill='both',expand=1)
+        #self.Fplot.grid(row=2,column=1,sticky='we',expand=1)
+
     def defaultSettings(self):
         self.connectStr.set('470026765')   
         self.connectMode.set(self.connectOptions[2])
@@ -322,6 +305,8 @@ class App(tk.Tk):
         self.connectStr.set('192.168.1.125')   
         self.connectMode.set(self.connectOptions[0])
         
+        self.configuration_file = 'none'
+                
         # Output voltage default values
         self.output.set('??')
         self.outputMax.set('2500')
@@ -331,19 +316,7 @@ class App(tk.Tk):
         self.numscans.set('5500')
         self.scansperread.set('5500')
         self.delay.set('500')
-
-        self.tstart.set('110')
-        self.tend.set('210')
-        self.minpeak.set('500')
-        self.FSR.set('1500')
         
-        self.FSRtime.set('??')
-        self.dT.set('??')
-        self.dF.set('??')    
-        
-        self.dFset.set('-200')
-        self.hys.set('50')
-        self.dV.set('1')  
         
     def set_output_state(self,state):
         self.bDa['state'] = state
@@ -354,6 +327,41 @@ class App(tk.Tk):
         self.bDf['state'] = state
 
     def create_widgets(self):
+        # Config Label
+        tk.Label(self.Fconfig,text='Configuration File',font=(font_name_lbl,"12"),
+                 bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=1,stick='w') 
+        
+        # Load new configuration file        
+        self.LoadConfig=tk.Button(self.Fconfig,text="load",
+                  font=(font_name,"10"),width=4,bd=2,command=self.loadfile,state='active')
+        self.LoadConfig.grid(row = 1, column=2,sticky='w')
+        
+        # Configuration file
+        self.ConfigFile = tk.Label(self.Fconfig,font=(font_name,"10"),
+                 bg='white',justify='left',bd=0,fg='black',text='none')
+        self.ConfigFile.grid(row=1,column=3,columnspan=3,stick='w')       
+        
+        # Saving Label
+        tk.Label(self.Fsave,text='Saving',font=(font_name_lbl,"12"),
+                 bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=1,stick='w') 
+        
+        tk.Checkbutton(self.Fsave, text='save?',variable=self.doSave, onvalue=1, offvalue=0, 
+                       ).grid(row=1,column=2,columnspan=1,stick='w') 
+        
+        tk.Checkbutton(self.Fsave, text='associate with sequencer?',variable=self.doAdwin, onvalue=1, offvalue=0, 
+                       ).grid(row=1,column=3,columnspan=1,stick='w') 
+        
+        # Load new configuration file        
+        self.LoadConfig=tk.Button(self.Fsave,text="load",
+                  font=(font_name,"10"),width=4,bd=2,command=self.choosesavedir,state='active')
+        self.LoadConfig.grid(row = 1, column=4,sticky='w')
+        
+        # Configuration file
+        self.SaveDirectory = tk.Label(self.Fsave,font=(font_name,"10"),
+                 bg='white',justify='left',bd=0,fg='black',text='none')
+        self.SaveDirectory.grid(row=1,column=5,columnspan=1,stick='w')    
+        
+        
         # Connect Label
         tk.Label(self.Fconnect,text='Labjack Connection',font=(font_name_lbl,"12"),
                  bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=3,stick='w') 
@@ -511,145 +519,9 @@ class App(tk.Tk):
                  font=(font_name,"10"),width=14,validatecommand=self.vcmdNum,validate='key').grid(
                      row=4,column=2,columnspan=1,sticky='w')  
 
-        # Peaks Analysis Settings
-        tk.Label(self.Fpeak,text='Peak Analysis Settings',font=(font_name_lbl,"12"),
-                 bg='white',justify='left',height=1,bd=0).grid(
-                     row=1,column=1,columnspan=1,sticky='w')  
-        
-        
-        # Frame for peak analysis settingss
-        tbl3 = tk.Frame(self.Fpeak,bd=1,bg="white",highlightbackground="grey",highlightthickness=1)
-        tbl3.grid(row=2,column=1,columnspan=3,sticky='nswe')
-        
-    
-        vcmd1 = (self.register(self.onValidateStart),
-                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-        vcmd2 = (self.register(self.onValidateEnd),
-                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')        
-        
-        # Time Start
-        tk.Label(tbl3,text='time start (ms)',font=(font_name,"10"),
-                 bg='white',justify='left',bd=0,width=18).grid(
-                     row=1,column=1,columnspan=1,stick='w')  
-        tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.tstart,
-                 validatecommand=vcmd1,validate='key').grid(
-                     row=1,column=2,columnspan=1,sticky='NSEW')                 
-                     
-        # Time End
-        tk.Label(tbl3,text='time end (ms)',font=(font_name,"10"),
-                 bg='white',justify='left',bd=0,width=18).grid(
-                     row=2,column=1,columnspan=1,stick='w')  
-        tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.tend,
-                 validatecommand=vcmd2,validate='key').grid(
-                     row=2,column=2,columnspan=1,sticky='NSEW')  
-        
-        # Peak Height
-        tk.Label(tbl3,text='min peak (mV)',font=(font_name,"10"),
-                 bg='white',justify='left',bd=0,width=18).grid(
-                     row=3,column=1,columnspan=1,stick='w')  
-        tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.minpeak,validatecommand=self.vcmdNum,validate='key').grid(
-                     row=3,column=2,columnspan=1,sticky='NSEW')  
-        # Peak Height
-        tk.Label(tbl3,text='auto time bounds?',font=(font_name,"10"),
-                 bg='white',justify='left',bd=0,width=18).grid(
-                     row=3,column=1,columnspan=1,stick='w')  
-        tk.Checkbutton(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 variable=self.autoTrack).grid(
-                     row=3,column=2,columnspan=1,sticky='NSEW')  
-                     
-        # FSR
-        tk.Label(tbl3,text='FSR (MHz)',font=(font_name,"10"),bg='white',
-                 justify='left',bd=0,width=18).grid(row=5,column=1,columnspan=1,stick='w') 
-        tk.Entry(tbl3,bg='white',font=(font_name,"10"),justify='center',
-                 width=14,textvariable=self.FSR,validatecommand=self.vcmdNum,validate='key').grid(row=5,column=2,columnspan=1,sticky='NSEW')  
-
-        # Peaks Analysis Output
-        tk.Label(self.Fpeakout,text='Peak Analysis Output',font=(font_name_lbl,"12"),
-                 bg='white',justify='left',height=1,bd=0).grid(
-                     row=1,column=1,columnspan=1,sticky='w')  
-        
-        # Frame for peak analysis outputs
-        tbl4 = tk.Frame(self.Fpeakout,bd=1,bg="white",highlightbackground="grey",highlightthickness=1)
-        tbl4.grid(row=2,column=1,columnspan=3,sticky='nswe')        
-        
-        # FSR time (ms)
-        tk.Label(tbl4,text='FSR time meas. (ms)',font=(font_name,"10"),
-                 bg='white',justify='left',bd=0,width=18).grid(
-                     row=1,column=1,columnspan=1,stick='w')  
-        tk.Label(tbl4,textvariable=self.FSRtime,font=(font_name,"10"),bg='white',
-                 justify='left',bd=0,width=14,borderwidth=1,relief='groove').grid(
-                     row=1,column=2,columnspan=1,stick='w')  
-                  
-        # dT
-        tk.Label(tbl4,text='\u0394T meas. (ms)',font=(font_name,"10"),
-                 bg='white',justify='left',bd=0,width=18).grid(
-                     row=2,column=1,columnspan=1,stick='w')  
-        tk.Label(tbl4,textvariable=self.dT,font=(font_name,"10"),bg='white',justify='left',
-                 bd=0,width=14,borderwidth=1,relief='groove').grid(
-                     row=2,column=2,columnspan=1,stick='w')  
-        
-        # dF
-        tk.Label(tbl4,text='\u0394f meas. (MHz)',font=(font_name,"10"),
-                 bg='white',justify='left',bd=0,width=18).grid(
-                     row=3,column=1,columnspan=1,stick='w')  
-        tk.Label(tbl4,textvariable=self.dF,font=(font_name,"10"),bg='white',justify='left',
-                 bd=0,width=14,borderwidth=1,relief='groove').grid(
-                     row=3,column=2,columnspan=1,stick='ew')        
-        
-        # Lock Settings Label
-        tk.Label(self.Flock,text='Lock Settings',font=(font_name_lbl,"12"),
-                 bg='white',justify='left',height=1,bd=0).grid(
-                                     row=1,column=1,columnspan=1,sticky='w')  
-                     
-                             
-        # Acqsuisition Status
-        self.LockStatus = tk.Label(self.Flock,font=(font_name,"10"),
-                 bg='white',justify='left',bd=0,fg='red',text='lock not engaged')
-        self.LockStatus.grid(row=2,column=1,columnspan=3,stick='w') 
-                     
-        # Lock Button Frame
-        self.FlockButt = tk.Frame(self.Flock,bd=1,bg="white",
-                             highlightbackground="grey",highlightthickness=1)
-        self.FlockButt.grid(row=3,column=1,sticky='w')
 
         
-        # Start Lock
-        self.dolockbutt=tk.Button(self.FlockButt,text="engage lock",bg=_from_rgb((137, 207, 240)),font=(font_name,"10"),
-                  width=15,bd=3,command=self.startlock)
-        self.dolockbutt.grid(row = 1, column=1,sticky='w')  
-        
-        # Stop Lock
-        self.nolockbutt=tk.Button(self.FlockButt,text="stop lock",bg=_from_rgb((255, 165, 0)),font=(font_name,"10"),
-                  width=14,bd=3,command=self.stoplock)
-        self.nolockbutt.grid(row = 1, column=2,sticky='w')  
-        
-        # Table For Lock Settings
-        self.locktable = tk.Frame(self.Flock,bd=1,bg="white",highlightbackground="grey",highlightthickness=1)
-        self.locktable.grid(row=4,column=1,columnspan=3,sticky='nswe')
-        
-        # df set
-        tk.Label(self.locktable,text='\u0394f set (MHz)',font=(font_name,"10"),
-                 bg='white',justify='left',height=1,bd=0,width=18).grid(
-                     row=1,column=1,columnspan=1,stick='w')
-        tk.Entry(self.locktable,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dFset).grid(
-            row=1,column=2,columnspan=1,sticky='NSEW')   
-        
-        # hysteresis
-        tk.Label(self.locktable,text='hysteresis (MHz)',font=(font_name,"10"),
-                 bg='white',justify='left',height=1,bd=0,width=18).grid(
-                     row=2,column=1,columnspan=1,stick='w')
-        tk.Entry(self.locktable,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.hys,validatecommand=self.vcmdNum,validate='key').grid(
-            row=2,column=2,columnspan=1,sticky='NSEW')  
-        
-        # step size
-        tk.Label(self.locktable,text='\u0394V output step (mV)',font=(font_name,"10"),
-                 bg='white',justify='left',height=1,bd=0,width=18).grid(
-                     row=3,column=1,columnspan=1,stick='w')
-        tk.Entry(self.locktable,bg='white',font=(font_name,"10"),justify='center',width=14,textvariable=self.dV,validatecommand=self.vcmdNum,validate='key').grid(
-            row = 3, column=2,columnspan=1,sticky='NSEW')  
+     
         
     def validNum(self,P):
         if P.isnumeric():
@@ -719,54 +591,16 @@ class App(tk.Tk):
                  bg='white',justify='left',height=1,bd=0).pack(side='top',anchor='nw')                    
 
         self.fig = Figure()
-        self.fig.autofmt_xdate()
-        gs = GridSpec(3, 1, figure=self.fig)        
-        self.ax1 = self.fig.add_subplot(gs[:-1, :])
-        self.ax1.set_ylabel("cavity voltage (mV)",color='black')
-        self.ax1.set_xlabel("time (ms)")
-        self.p1, = self.ax1.plot(self.t,self.y1,color='black')
-        self.ax1.set_xlim([0,300])
+        self.fig.autofmt_xdate()       
         
-        self.ax1.grid(True)
-        
-        self.pdT, = self.ax1.plot(np.array([0,1]),np.array([1000,1000]),color='blue')
-        self.pdT.set_visible(False)
-        
-        self.pFSR, = self.ax1.plot(np.array([0,1]),np.array([1000,1000]),color='red')
-        self.pFSR.set_visible(False)    
-        
-        self.pT1, = self.ax1.plot(np.array([1,1])*int(self.tstart.get()),np.array([0,1300]),color='g',linestyle='dashed')
-        self.pT2, = self.ax1.plot(np.array([1,1])*int(self.tend.get()),np.array([0,1300]),color='g',linestyle='dashed')
-       
-        self.ax1.tick_params(axis='y', labelcolor='black')        
-        
-        tHisFake = [datetime.datetime.now()-datetime.timedelta(1e-4), datetime.datetime.now()]
-        dfFake = [0, 0]
-        vFake = [1.25, 1.25]        
-        
-        color = 'tab:blue'
-        self.ax2 = self.ax1.twinx()  # instantiate a second axes that shares the same x-axis
-        color = 'tab:red'
-        self.ax2.set_ylabel('cavity ramp (mV)', color=color)  # we already handled the x-label with ax1
-        self.p2,=self.ax2.plot(self.t, self.y2, color=color)
-        self.ax2.tick_params(axis='y', labelcolor=color)
-        
-        self.ax3 = self.fig.add_subplot(gs[-1, :])
-        self.p3,=self.ax3.plot(tHisFake, dfFake, color='black')
-        self.ax3.set_ylabel(r"$\Delta f~\mathrm{measure}~(\mathrm{MHz})$")
-        self.ax3.set_xlabel("time")
-        myFmt = DateFormatter('%H:%M:%S')
-        self.ax3.xaxis.set_major_formatter(myFmt)
-        
-        self.ax3.grid(True)
-        
-        color = 'tab:blue'
-        self.ax4 = self.ax3.twinx()  # instantiate a second axes that shares the same x-axis
-        self.ax4.set_ylabel('output (mV)', color=color)  # we already handled the x-label with ax1
-        self.p4,=self.ax4.plot(tHisFake,vFake, color=color)
-        self.ax4.tick_params(axis='y', labelcolor=color)
-        self.ax4.xaxis.set_major_formatter(myFmt)
-
+        self.ax1= self.fig.add_subplot(1,1,1)
+        self.ax1.set_ylabel("voltage (V)")
+        self.ax1.set_xlabel("time (s)")
+        self.ax1.xaxis.set_label_position("bottom")
+        self.ax1.xaxis.tick_bottom()
+        #self.ax1.set_xlim(0,10)
+        self.ax1.set_ylim(-10,10)
+        self.ax1.patch.set_facecolor('#D7D7D7')
         self.fig.tight_layout()
         
         
@@ -778,17 +612,6 @@ class App(tk.Tk):
         # placing the canvas on the Tkinter window
         self.canvas.get_tk_widget().pack(side='top',fill='both',expand=True)
         
-        # creating the Matplotlib toolbar
-        #toolbar = NavigationToolbar2Tk(canvas,
-                                       #frame_plot)
-        #toolbar.update()
-          
-        # placing the toolbar on the Tkinter window
-        #canvas.get_tk_widget().pack()
-        
-        
-                #canvas1.get_tk_widget().pack(side="top",fill='both',expand=True)
-                #canvas1.pack(side="top",fill='both',expand=True)
              
     def configLJM(self):
         ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
@@ -820,6 +643,44 @@ class App(tk.Tk):
         
     def configMan(self):
         ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", 0);
+        
+    def choosesavedir(self):
+        print('what what')
+
+        
+    def loadfile(self):
+        
+        path = filedialog.askopenfilename(initialdir=dir_path+'/conf', title="Select file",
+                                          filetypes=(("config file (.json)", "*.json"),("all files", "*.*")))
+        print(path)
+        if path:
+            self.ConfigFile.config(text=path)
+            print('Loading from ' + path)
+            
+            with open(path, "r") as f:
+                config = json.load(f)
+                
+            if "trigger" in config:
+                self.TriggerChannel =config['trigger']                
+            if "analog_channels" in config:
+                self.InputChannels = config['analog_channels']                
+                self.InputNames = config['analog_names']
+            if "scanrate" in config:
+                self.scanrate.set(config['scanrate'])                
+            if "numscans" in config:
+                self.numscans.set(config['numscans'])
+            if "save_root" in config:
+                self.SaveRoot.set(config["save_root"])
+            if "scansperread" in config:
+                self.scansperread.set(config["scansperread"])       
+            if "delay" in config:
+                self.delay.set(config["delay"])    
+      
+        else:
+            print('Canceling loading new configuration file')
+
+        
+
         
     def connect(self):
         try:
@@ -877,9 +738,7 @@ class App(tk.Tk):
             self.ConnectStatus.config(text='disconnected',fg='red')
             self.b1['state']='normal'
             self.b2['state']='disabled'
-            self.set_state(self.Foutput,'disabled')
-            self.set_state(self.FacqButt,'disabled')
-            self.set_state(self.FlockButt,'disabled')
+ 
 
     def increment(self,inc):
         if self.isConnected:

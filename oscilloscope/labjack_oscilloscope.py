@@ -674,13 +674,9 @@ class App(tk.Tk):
             if "scansperread" in config:
                 self.scansperread.set(config["scansperread"])       
             if "delay" in config:
-                self.delay.set(config["delay"])    
-      
+                self.delay.set(config["delay"])   
         else:
-            print('Canceling loading new configuration file')
-
-        
-
+            print('Canceling loading new configuration file')        
         
     def connect(self):
         try:

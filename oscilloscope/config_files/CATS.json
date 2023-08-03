@@ -11,6 +11,7 @@
 	"numscans" : 10000,
 	"scansperread" : 1000,
 	"save_root" : "X:\\LabJack\\CATS",
+	"save_label" : "CATS",
 	"delay" : 500,
 	"associate_with_sequencer" : true,
 	"dosave" : true

@@ -85,9 +85,9 @@ class stream(Thread):
         aScanList = ljm.namesToAddresses(nAddr, self.InputChannels)[0]   
         
         # Get the scan rate (Hz) and number of total samples    
-        scanrate = float(self.scanrate)
-        numscans=int(self.numscans)
-        scansperread=int(self.scansperread)
+        scanrate = self.scanrate
+        numscans=self.numscans
+        scansperread=self.scansperread
         Tacquire = numscans/scanrate  
         
         # Initilize Counters
@@ -188,20 +188,22 @@ class App(tk.Tk):
         self.isConnected = False       
         
         self.SaveRoot = tk.StringVar(self)
+        self.SaveLabel = tk.StringVar(self)
+
         self.connectMode = tk.StringVar(self)   # Connect Mode
         self.connectStr = tk.StringVar(self)    # Connect String    
         
-        self.output = tk.StringVar(self)        # Output Voltage 
-        self.outputMax = tk.StringVar(self)     # Output Voltage Max
-        self.outputMin = tk.StringVar(self)     # Output Voltage Min
+        self.output = tk.IntVar(self)        # Output Voltage 
+        self.outputMax = tk.IntVar(self)     # Output Voltage Max
+        self.outputMin = tk.IntVar(self)     # Output Voltage Min
 
-        self.scanrate = tk.StringVar(self)      # Scan Rate 
-        self.numscans = tk.StringVar(self)      # Output Voltage
-        self.scansperread = tk.StringVar(self)  # Output Voltage Max 
-        self.delay = tk.StringVar(self)         # Output Voltage Min 
+        self.scanrate = tk.IntVar(self)      # Scan Rate 
+        self.numscans = tk.IntVar(self)      # Output Voltage
+        self.scansperread = tk.IntVar(self)  # Output Voltage Max 
+        self.delay = tk.IntVar(self)         # Output Voltage Min 
         
-        self.doAdwin = tk.IntVar(self)
-        self.doSave = tk.IntVar(self)
+        self.doAdwin = tk.BooleanVar(self)
+        self.doSave = tk.BooleanVar(self)
 
         self.t = np.linspace(0, 300, 301)
         self.data = np.linspace(0,300,301)
@@ -291,13 +293,13 @@ class App(tk.Tk):
                 
         # Output voltage default values
         self.output.set('??')
-        self.outputMax.set('2500')
-        self.outputMin.set('0')    
+        self.outputMax.set(2500)
+        self.outputMin.set(0)    
         
-        self.scanrate.set('20000')
-        self.numscans.set('5500')
-        self.scansperread.set('5500')
-        self.delay.set('500')
+        self.scanrate.set(20000)
+        self.numscans.set(5500)
+        self.scansperread.set(5500)
+        self.delay.set(500)
         
         
     def set_output_state(self,state):
@@ -327,10 +329,10 @@ class App(tk.Tk):
         tk.Label(self.Fsave,text='Saving',font=(font_name_lbl,"12"),
                  bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=1,stick='w') 
         
-        tk.Checkbutton(self.Fsave, text='save?',variable=self.doSave, onvalue=1, offvalue=0, 
+        tk.Checkbutton(self.Fsave, text='save?',variable=self.doSave, onvalue=True, offvalue=False, 
                        ).grid(row=1,column=2,columnspan=1,stick='w') 
         
-        tk.Checkbutton(self.Fsave, text='associate with sequencer?',variable=self.doAdwin, onvalue=1, offvalue=0, 
+        tk.Checkbutton(self.Fsave, text='associate with sequencer?',variable=self.doAdwin, onvalue=True, offvalue=False, 
                        ).grid(row=1,column=3,columnspan=1,stick='w') 
         
         # Load new configuration file        
@@ -611,6 +613,7 @@ class App(tk.Tk):
         myd=[[5,1],[3,1,1,1],'']
         
         
+ 
         
         self.t = np.linspace(0,int(self.numscans.get())-1,int(self.numscans.get()))/int(self.scanrate.get())
         self.data = np.zeros((self.t.size,len(self.InputChannels)))
@@ -707,6 +710,8 @@ class App(tk.Tk):
                     self.numscans.set(config['numscans'])
                 if "save_root" in config:
                     self.SaveRoot.set(config["save_root"])
+                if "save_label" in config:
+                    self.SaveLabel.set(config["save_label"])
                 if "scansperread" in config:
                     self.scansperread.set(config["scansperread"])       
                 if "delay" in config:

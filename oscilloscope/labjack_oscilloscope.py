@@ -60,7 +60,6 @@ class stream(Thread):
         self.handle = handle
         self.goodStream         = True
 
-
         # Stream Properties
         self.scanrate           = None
         self.numscans           = None
@@ -73,11 +72,8 @@ class stream(Thread):
         
         # Data
         self.t                  = None
-        self.y1                  = None
-        self.y2                  = None
-
-        self.lastacquisition    = None 
-        
+        self.data               = None
+        self.lastacquisition    = None         
         self.delay              = None
        
     def run(self):
@@ -100,13 +96,17 @@ class stream(Thread):
         i = 1                   # Number of reads
         ljmScanBacklog = 0      # Backlog on the LJM
         dataAll=[]              # All data
-        sleepTime = float(scansperread)/float(scanrate)
-        
-        # Wait until trigger level is appropriate
-        tLevel = 0;
-        while (tLevel == 0):
-            tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
-            time.sleep(0.005)     
+        sleepTime = float(scansperread)/float(scanrate)       
+
+        if ljm.eReadName(self.handle, "STREAM_TRIGGER_INDEX"):                    
+            print('waiting for trigger')
+
+            # Wait until trigger level is appropriate
+            tLevel = 0;
+            while (tLevel == 0):
+                tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
+                time.sleep(0.005)     
+
 
         # Configure and start stream
         scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)   
@@ -152,20 +152,13 @@ class stream(Thread):
             e = sys.exc_info()[1]
             print(e)                
         if self.goodStream:  
-            #t3=time.time()
-
             self.AcqStatus.config(text='processing stream ... ',fg='green')
-            self.AcqStatus.update()     
-            
-            tVec = np.linspace(0,numscans-1,numscans)/scanrate
-            data = np.zeros((numscans,nAddr))
-            data = np.array(dataAll).reshape(numscans,nAddr)   
+            self.AcqStatus.update()               
 
-            # Convert data to mV and ms
-            self.t = 1000*tVec
-            self.y1 = 1000*data[:,0]
-            self.y2 = 1000*data[:,1]    
+            self.t = np.linspace(0,numscans-1,numscans)/scanrate
+            self.data = np.array(dataAll).reshape(numscans,nAddr)   
 
+            print(self.data.shape)
             #self.lastacquisition = tAcq
             self.lastacq = time.time()
             if totSkip>0:
@@ -176,8 +169,6 @@ class stream(Thread):
         self.AcqStatus.config(text='idle ',fg='brown')
         self.AcqStatus.update()     
         #time.sleep(.5)
-
-
 
 class App(tk.Tk):
     def __init__(self):        
@@ -194,17 +185,9 @@ class App(tk.Tk):
         self.vcmdNum = (self.register(self.validNum),'%P')
 
         # Internal Labjack Settings
-        self.isConnected = False
-        self.TriggerChannel = "DIO0"
-        self.InputChannels = ["AIN0", "AIN1"]
-        self.InputNames = ["AIN0","AIN1"]
-        self.OutputChannel = "DAC0"
-        
-        self.doSave = 0
-        self.doAdwin = 0
+        self.isConnected = False       
         
         self.SaveRoot = tk.StringVar(self)
-
         self.connectMode = tk.StringVar(self)   # Connect Mode
         self.connectStr = tk.StringVar(self)    # Connect String    
         
@@ -216,18 +199,19 @@ class App(tk.Tk):
         self.numscans = tk.StringVar(self)      # Output Voltage
         self.scansperread = tk.StringVar(self)  # Output Voltage Max 
         self.delay = tk.StringVar(self)         # Output Voltage Min 
+        
+        self.doAdwin = tk.IntVar(self)
+        self.doSave = tk.IntVar(self)
 
         self.t = np.linspace(0, 300, 301)
-        self.y1 = np.exp(-self.t)
-        self.y2 = np.sin(2 * np.pi * self.t/50)
+        self.data = np.linspace(0,300,301)
+
         
         self.defaultSettings()        
         self.create_frames()        
         self.create_widgets() 
-        self.create_plots()
-
-        
-            
+        self.create_plots()       
+        self.init_plots()
         
     def process_stream(self, thread):
         if thread.is_alive():
@@ -238,8 +222,7 @@ class App(tk.Tk):
                 
             if thread.goodStream:
                 self.t = thread.t
-                self.y1 = thread.y1
-                self.y2 = thread.y2
+                self.data = thread.data
                 self.lastAcquisition = thread.lastacquisition                
                 self.update()
                 
@@ -249,7 +232,6 @@ class App(tk.Tk):
                 self.forcebutt['state']='normal'
                 self.acqbutt['state']='normal' 
                 self.set_state(self.acqtbl,'normal')
-                self.set_state(self.Fpeak,'normal')
 
 
     #Define a Function to enable the frame
@@ -295,16 +277,16 @@ class App(tk.Tk):
         self.Fplot.pack(side='bottom',fill='both',expand=1)
         #self.Fplot.grid(row=2,column=1,sticky='we',expand=1)
 
-    def defaultSettings(self):
-        self.connectStr.set('470026765')   
-        self.connectMode.set(self.connectOptions[2])
-        
-        #self.connectStr.set('192.168.0.177')   
-        #self.connectMode.set(self.connectOptions[0])
-        
+    def defaultSettings(self):        
         self.connectStr.set('192.168.1.125')   
         self.connectMode.set(self.connectOptions[0])
         
+        self.TriggerChannel = "DIO0"
+        self.InputChannels = ["AIN0", "AIN1"]
+        self.InputNames = ["AIN0","AIN1"]
+        self.OutputChannel = "DAC0"        
+        self.doSave.set(0)
+        self.doAdwin.set(0)              
         self.configuration_file = 'none'
                 
         # Output voltage default values
@@ -600,7 +582,9 @@ class App(tk.Tk):
         self.ax1.xaxis.tick_bottom()
         #self.ax1.set_xlim(0,10)
         self.ax1.set_ylim(-10,10)
-        self.ax1.patch.set_facecolor('#D7D7D7')
+        self.ax1.patch.set_facecolor('#c0c0c0')
+        
+        
         self.fig.tight_layout()
         
         
@@ -611,6 +595,51 @@ class App(tk.Tk):
           
         # placing the canvas on the Tkinter window
         self.canvas.get_tk_widget().pack(side='top',fill='both',expand=True)
+        
+    def init_plots(self):
+        myc=['#e41a1c',
+             '#377eb8',
+            '#4daf4a',
+            '#984ea3',
+            '#ff7f00',
+            '#ffff33']
+        myc=['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', 
+             '#42d4f4', '#bfef45', '#fabed4', '#469990', '#dcbeff', 
+             '#9A6324', '#800000', '#aaffc3', '#808000',  
+             '#000075', '#000000','#ffffff']
+        
+        myd=[[5,1],[3,1,1,1],'']
+        
+        
+        
+        self.t = np.linspace(0,int(self.numscans.get())-1,int(self.numscans.get()))/int(self.scanrate.get())
+        self.data = np.zeros((self.t.size,len(self.InputChannels)))
+
+        
+        if type(self.ax1.get_legend()) is not type(None):
+            self.ax1.get_legend().remove()
+
+        
+        self.lines = []
+        for j in range(len(self.InputChannels)):
+            self.lines.append(self.ax1.plot([],[],color=myc[j % len(myc)],linewidth=2)[0])
+            #self.lines[j].set_dashes(myd[j // len(myc)])
+            
+            
+ 
+            
+        self.legend=[]
+        self.legend = self.ax1.legend(self.lines,self.InputNames,loc="center left",fontsize=10,
+                                      bbox_to_anchor=(1.01,0.5),facecolor="#c0c0c0")                                     
+        self.fig.subplots_adjust(left=.075, bottom=None, right=0.9, top=None, wspace=None, hspace=None)
+
+        for line in self.legend.get_lines():
+            line.set_linewidth(6.0)
+        
+        self.update()
+        
+        self.canvas.draw()
+
         
              
     def configLJM(self):
@@ -646,6 +675,9 @@ class App(tk.Tk):
         
     def choosesavedir(self):
         print('what what')
+        
+        
+
 
         
     def loadfile(self):
@@ -659,22 +691,33 @@ class App(tk.Tk):
             
             with open(path, "r") as f:
                 config = json.load(f)
-                
-            if "trigger" in config:
-                self.TriggerChannel =config['trigger']                
-            if "analog_channels" in config:
-                self.InputChannels = config['analog_channels']                
-                self.InputNames = config['analog_names']
-            if "scanrate" in config:
-                self.scanrate.set(config['scanrate'])                
-            if "numscans" in config:
-                self.numscans.set(config['numscans'])
-            if "save_root" in config:
-                self.SaveRoot.set(config["save_root"])
-            if "scansperread" in config:
-                self.scansperread.set(config["scansperread"])       
-            if "delay" in config:
-                self.delay.set(config["delay"])   
+                    
+                if "ip_address" in config:
+                    self.connectStr.set(config['ip_address'])
+                    self.connectMode.set(self.connectOptions[0])
+                if "trigger" in config:
+                    self.TriggerChannel =config['trigger']                
+                if "analog_channels" in config:
+                    self.InputChannels = config['analog_channels']                
+                    self.InputNames = config['analog_names']
+                    self.init_plots()
+                if "scanrate" in config:
+                    self.scanrate.set(config['scanrate'])                
+                if "numscans" in config:
+                    self.numscans.set(config['numscans'])
+                if "save_root" in config:
+                    self.SaveRoot.set(config["save_root"])
+                if "scansperread" in config:
+                    self.scansperread.set(config["scansperread"])       
+                if "delay" in config:
+                    self.delay.set(config["delay"])   
+                if "associate_with_sequencer" in config:
+                    #self.delay.set(config["associate_with_sequencer"])   
+                    print('boop')
+                if "dosave" in config:
+                    #self.delay.set(config["dosave"])   
+                    print('dosave')
+
         else:
             print('Canceling loading new configuration file')        
         
@@ -764,7 +807,7 @@ class App(tk.Tk):
         self.forcebutt['state']='disabled'
         self.acqbutt['state']='disabled'
         self.set_state(self.acqtbl,'disabled')
-        self.set_state(self.Fpeak,'disabled')
+
 
         stream_thread = stream(self.handle)        
         stream_thread.numscans=int(self.numscans.get())
@@ -787,7 +830,6 @@ class App(tk.Tk):
         self.forcebutt['state']='disabled'
         self.acqbutt['state']='disabled'          
         self.set_state(self.acqtbl,'disabled')
-        self.set_state(self.Fpeak,'disabled')
         self.dolockbutt['state']='normal'        
         self.doTrigAcq()
 
@@ -805,179 +847,21 @@ class App(tk.Tk):
         self.process_stream(stream_thread)  
             
     def stopacq(self):
-        self.doAutoAcq = False
-        self.set_state(self.FlockButt,'disabled')
-
-        self.doLock = False
+        print('stop acquisition')
         
-    def startlock(self):
-        self.doLock = True            
-        self.dolockbutt['state']='disabled'
-        self.nolockbutt['state']='normal'
-
-        self.LockStatus.config(text='lock engaged',fg='green')
-        self.LockStatus.update()     
-        
-    def stoplock(self):
-        self.doLock = False
-        self.dolockbutt['state']='normal'
-        self.nolockbutt['state']='disabled'
-
-        self.LockStatus.config(text='lock not engaged',fg='red')
-        self.LockStatus.update()    
+   
     def update(self): 
-
-        self.p1.set_data(self.t,self.y1)
-        self.p2.set_data(self.t,self.y2)
-        
+        for j in range(len(self.InputChannels)):
+            self.lines[j].set_data(self.t,self.data[:,j])           
         self.ax1.set_xlim(0,np.amax(self.t))
-        self.ax1.set_ylim(-100,300)
-        self.ax2.set_ylim(0,1200)        
-        
-        if int(self.tstart.get())<int(self.tend.get()):
-            t = self.t
-            y = self.y1 
-            
-            i1 = t >= int(self.tstart.get())
-            i2 = t <= int(self.tend.get())            
-            i = i1 & i2            
-            y = y[i]
-            t = t[i]
-    
-            # Find peaks
-            peaks=scipy.signal.find_peaks(y, height=6,prominence=6) 
-            
-            yP = y[peaks[0]]
-            tP = t[peaks[0]]
-      
-            # Sort in ascending order
-            i = np.argsort(yP)        
-            yP = yP[i]
-            tP = tP[i]
-            
-            # Process the peaks if there are four of them
-            if tP.size == 4:
-                
-  
-                    
-                    
-                
-                # Get the two biggest peaks and sort by time
-                TpA = tP[2:4]
-                yA = yP[2:4]            
-                iA = np.argsort(TpA)
-                TpA = TpA[iA]
-                yA = yA[iA]            
-    
-                # Get teh two smallest peaks and sort by time
-                TpB = tP[0:2]
-                yB = yP[0:2]            
-                iB = np.argsort(TpB)
-                TpB = TpB[iB]
-                yB = yB[iB] 
-                
-                if (self.autoTrack.get()==1):
-                    tL = np.min([TpA[0],TpB[0]])
-                    tH = np.max([TpA[1],TpB[1]])
-                    
-                    tL = round(tL - 15)
-                    tH = round(tH + 15)
-       
-                    self.tstart.set(str(tL))
-                    self.tend.set(str(tH))
-                
-                # Calculate the FSR            
-                FSR_A = np.round(abs(TpA[0]-TpA[1]),2)
-                FSR_B = np.round(abs(TpB[0]-TpB[1]),2)
-                
-                # Calculate the time separation
-                dT = np.round(TpB[0]-TpA[0],2)
-                dF = np.round(float(self.FSR.get())*dT/FSR_A)
-    
-                self.dT.set(str(dT))
-                self.FSRtime.set(str(FSR_A))
-                self.dF.set(str(round(dF,1)))
-                
-                self.pdT.set_data([TpB[0], TpA[0]],np.mean([yA[0],yB[0]])*np.array([1,1]))
-                self.pdT.set_visible(True)
-                
-                self.pFSR.set_data(TpA,np.mean(yA)*np.array([1,1]))
-                self.pFSR.set_visible(True)
-                
-                # Update the history
-                
-                tNow = datetime.datetime.now()
-                
-                if len(self.tHis) == self.nHis:
-                    self.tHis.pop(0)
-                    self.dfHis.pop(0)
-                    self.vHis.pop(0)
-                
-                self.tHis.append(tNow)
-                self.dfHis.append(dF)
-                self.vHis.append(float(self.output.get())) 
-                
-                self.p3.set_data(self.tHis,self.dfHis)
-                self.p4.set_data(self.tHis,self.vHis)
-                
-                self.ax3.set_ylim(np.min(self.dfHis)-10,np.max(self.dfHis)+10)
-                self.ax4.set_ylim(np.min(self.vHis)-10,np.max(self.vHis)+10)                
-                
-                self.ax3.set_xlim(self.tHis[0]-datetime.timedelta(seconds=5),
-                                  self.tHis[-1]+datetime.timedelta(seconds=5))
-                
-                if self.doLock:
-                    dFset = int(self.dFset.get())  
-                    hys = int(self.hys.get())                
-                    err = dF - dFset                       
-                    dV = int(self.dV.get())
-
-                    if (err<0) & (abs(err)>hys):
-                        self.increment(dV)                    
-                    if (err>0) & (abs(err)>hys):
-                        self.increment(-dV)                    
-            else:
-                self.pdT.set_visible(False)
-                self.pFSR.set_visible(False)    
-            self.canvas.draw()   
+        self.ax1.set_ylim(-10,10)       
+        self.canvas.draw()   
             
     def on_closing(self):
         self.disconnect()
         self.destroy()
 
-                
-
-"""
-VALIDATION OF INPUT FOR ENTRIES
-import tk as tk
-
-class window2:
-    def __init__(self, master1):
-        self.panel2 = tk.Frame(master1)
-        self.panel2.grid()
-        self.button2 = tk.Button(self.panel2, text = "Quit", command = self.panel2.quit)
-        self.button2.grid()
-        vcmd = (master1.register(self.validate),
-                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-        self.text1 = tk.Entry(self.panel2, validate = 'key', validatecommand = vcmd)
-        self.text1.grid()
-        self.text1.focus()
-
-    def validate(self, action, index, value_if_allowed,
-                       prior_value, text, validation_type, trigger_type, widget_name):
-        if value_if_allowed:
-            try:
-                float(value_if_allowed)
-                return True
-            except ValueError:
-                return False
-        else:
-            return False
-
-root1 = tk.Tk()
-window2(root1)
-root1.mainloop()
-"""
+      
 
 #%% Main Loop
 

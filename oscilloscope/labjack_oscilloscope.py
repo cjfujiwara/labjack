@@ -31,6 +31,8 @@ import sys
 import datetime
 from labjack import ljm
 import time
+from time import strftime
+
 from threading import Thread
 import queue
 from matplotlib.dates import DateFormatter
@@ -42,7 +44,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
 NavigationToolbar2Tk)
-
+import shutil
 # Math
 import numpy as np
 import scipy
@@ -73,11 +75,11 @@ class stream(Thread):
         # Data
         self.t                  = None
         self.data               = None
-        self.lastacquisition    = None         
+        self.lastAcquisition    = None         
         self.delay              = None
        
     def run(self):
-        self.AcqStatus.config(text='acquiring ... ',fg='green')
+        self.AcqStatus.config(text='initiating stream ...',fg='green')
         self.AcqStatus.update()  
         
         # Scan list addresses for streamBurst    
@@ -98,44 +100,67 @@ class stream(Thread):
         dataAll=[]              # All data
         sleepTime = float(scansperread)/float(scanrate)       
 
-        if ljm.eReadName(self.handle, "STREAM_TRIGGER_INDEX"):                    
-            print('waiting for trigger')
+        print(sleepTime)
+        #if ljm.eReadName(self.handle, "STREAM_TRIGGER_INDEX"):                    
+            #print('waiting for trigger')
 
             # Wait until trigger level is appropriate
-            tLevel = 0;
-            while (tLevel == 0):
-                tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
-                time.sleep(0.005)     
+            #tLevel = 0;
+            #while (tLevel == 0):
+                #tLevel=ljm.eReadName(self.handle,self.TriggerChannel)
+                #time.sleep(0.005)                   
+        ljmScanBacklog = 0      # Backlog on the LJM
+ 
 
+        print('Stream Started')
+        
 
+        
         # Configure and start stream
         scanrate = ljm.eStreamStart(self.handle, scansperread, nAddr, aScanList, scanrate)   
+        
+        self.AcqStatus.config(text=' stream started',fg='darkorange')
+        self.AcqStatus.update()  
+        
         t2 = time.time()
         time.sleep(sleepTime + 0.01)
         
+
+
         while (totScans < numscans) & self.goodStream:
+            ljm_stream_util.variableStreamSleep(scansperread, scanrate, ljmScanBacklog)
+
             try:                
                 ret = ljm.eStreamRead(self.handle) # read data in buffer
                 aData = ret[0]
-                #ljmScanBacklog = ret[2]
+                ljmScanBacklog = ret[2]
                 scans = len(aData) / nAddr
                 totScans += scans 
                 dataAll+=aData  
                 # -9999 values are skipped ones
                 curSkip = aData.count(-9999.0)
                 totSkip += curSkip                    
-                #print("eStreamRead %i : %i scans, %0.0f scans skipped, %i device backlog, %i in LJM backlog" % (i,totScans, curSkip/nAddr, ret[1], ljmScanBacklog))
+                print("eStreamRead %i : %i scans, %0.0f scans skipped, %i device backlog, %i in LJM backlog" % (i,totScans, curSkip/nAddr, ret[1], ljmScanBacklog))
+          
+                #lbl2.config(text="Data stream in progress ... (%i of %i scans)" % (totScans,numScans),bg="red")   
+  
+          
+                self.AcqStatus.config(text="Data stream in progress ... (%i of %i scans)" % (totScans,numscans),fg="red")   
+                self.AcqStatus.update()    
+          
+                #print("eStreamRead %i : %i scans, %0.0f scans skipped, %i device backlog, %i in LJM backlog" % (i,totScans, curSkip/numAddresses, ret[1], ljmScanBacklog))
 
                 i += 1                
                 if totScans<numscans:
                     time.sleep(sleepTime)
 
             except ljm.LJMError as err:
+                #self.goodStream = False
                 if err.errorCode == ljm.errorcodes.NO_SCANS_RETURNED:  
-                    if ((time.time()-t2)-Tacquire)>2:
-                        self.AcqStatus.config(text='ACQUISITION TIMEOUT',fg='red')
-                        self.AcqStatus.update()
-                        self.goodStream=0
+                    #if ((time.time()-t2)-Tacquire)>2:
+                    #    self.AcqStatus.config(text='ACQUISITION TIMEOUT',fg='red')
+                    #    self.AcqStatus.update()
+                    #    self.goodStream=False
                     sys.stdout.flush()
                     continue
                 else: 
@@ -146,9 +171,13 @@ class stream(Thread):
         try:
             ljm.eStreamStop(self.handle)   
         except ljm.LJMError:
+            print('err2')
+
             ljme = sys.exc_info()[1]
             print(ljme)
         except Exception:
+            print('err3')
+
             e = sys.exc_info()[1]
             print(e)                
         if self.goodStream:  
@@ -156,11 +185,9 @@ class stream(Thread):
             self.AcqStatus.update()               
 
             self.t = np.linspace(0,numscans-1,numscans)/scanrate
-            self.data = np.array(dataAll).reshape(numscans,nAddr)   
-
-            print(self.data.shape)
-            #self.lastacquisition = tAcq
-            self.lastacq = time.time()
+            self.data = np.array(dataAll).reshape(numscans,nAddr)               
+            self.lastAcquisition = strftime('%Y-%m-%d_%H-%M-%S') 
+            
             if totSkip>0:
                 print("lost frames : " + str(totSkip))
         else:
@@ -201,13 +228,17 @@ class App(tk.Tk):
         self.numscans = tk.IntVar(self)      # Output Voltage
         self.scansperread = tk.IntVar(self)  # Output Voltage Max 
         self.delay = tk.IntVar(self)         # Output Voltage Min 
+        self.lastAcquisition = tk.StringVar(self)
         
         self.doAdwin = tk.BooleanVar(self)
+        self.sequencer_file = tk.StringVar(self)
+        self.extra_file = tk.StringVar(self)
+
         self.doSave = tk.BooleanVar(self)
 
         self.t = np.linspace(0, 300, 301)
         self.data = np.linspace(0,300,301)
-
+        self.stream_thread = None
         
         self.defaultSettings()        
         self.create_frames()        
@@ -225,10 +256,10 @@ class App(tk.Tk):
             if thread.goodStream:
                 self.t = thread.t
                 self.data = thread.data
-                self.lastAcquisition = thread.lastacquisition                
+                self.lastAcquisition.set(thread.lastAcquisition)
                 self.update()
                 
-            if self.doAutoAcq:    
+            if self.doAutoAcq and thread.goodStream:    
                 self.after(int(self.delay.get()),self.doTrigAcq())
             else:
                 self.forcebutt['state']='normal'
@@ -642,14 +673,87 @@ class App(tk.Tk):
         self.update()
         
         self.canvas.draw()
+        
+    def makeOutputDirectory(self,y,m,d):
+        if not os.path.isdir(self.SaveRoot.get()):
+            os.mkdir(self.SaveRoot.get())
+        
+        ydir = os.path.join(self.SaveRoot.get(),y)
+        if not os.path.isdir(ydir):
+            os.mkdir(ydir)
+            
+        mdir = os.path.join(ydir,y+'.'+m)
+        if not os.path.isdir(mdir):
+            os.mkdir(mdir)
+        
+        ddir = os.path.join(mdir,m+'.'+d)
+        if not os.path.isdir(ddir):
+            os.mkdir(ddir)
+        
+        return(ddir)
 
         
+            
+            
+        
+        
+    def createOutput(self):
+        output = dict()
+        output['t'] = self.t
+        output['data'] = self.data
+        output['InputChannels'] = self.InputChannels
+        output['InputNames'] = self.InputNames
+
+        output['scanrate'] = self.scanrate.get()
+        output['numscans'] = self.numscans.get()
+        output['scansperread'] = self.scansperread.get()
+        output['AcquisitionTime'] = self.lastAcquisition.get()
+        if self.doAdwin.get() and os.path.isfile(self.sequencer_file.get()):
+            try:
+                fdata=scipy.io.loadmat(self.sequencer_file.get())
+                tstr = fdata['vals']['ExecutionDateStr'][0][0][0]                
+                tseq = datetime.datetime.strptime(tstr,'%d-%b-%Y %H:%M:%S').strftime('%Y-%m-%d_%H-%M-%S')
+                output['SequencerTime'] = tseq                
+            except Exception:
+                print("Unable to load sequencer file.")
+                
+
+                
+        y = output['AcquisitionTime'][0:4]
+        m = output['AcquisitionTime'][5:7]
+        d = output['AcquisitionTime'][8:10]
+        
+        ddir = self.makeOutputDirectory(y,m,d)
+        if self.doAdwin.get():
+            fname = self.SaveLabel.get() + '_' + output['SequencerTime']+'.mat'
+        else:
+            fname = self.SaveLabel.get() + '_' + output['AcquisitionTime']+'.mat'
+            
+        fullname = os.path.join(ddir,fname)
+
+        try: 
+            print('saving output to file ' + fname)
+            scipy.io.savemat(fullname,output)
+        except Exception:
+            print("Unable to save data")       
+            
+            
+        if self.doAdwin.get() and os.path.isfile(self.extra_file.get()):
+            try:
+                fbase, extension = os.path.splitext(fullname)                
+                extra_name = fbase + '_extra' + '.mat'    
+                
+                print(self.extra_file.get())
+                print(extra_name)
+                shutil.copy(self.extra_file.get(), extra_name)     
+            except Exception:
+                print("Issue with extra file.")
              
     def configLJM(self):
         ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
                                 ljm.constants.STREAM_SCANS_RETURN_ALL_OR_NONE)
-        ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
-                                ljm.constants.STREAM_SCANS_RETURN_ALL)
+        #ljm.writeLibraryConfigS(ljm.constants.STREAM_SCANS_RETURN, 
+        #                        ljm.constants.STREAM_SCANS_RETURN_ALL)
         ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 0)  
         #ljm.writeLibraryConfigS(ljm.constants.STREAM_RECEIVE_TIMEOUT_MS, 30)  
 
@@ -717,11 +821,14 @@ class App(tk.Tk):
                 if "delay" in config:
                     self.delay.set(config["delay"])   
                 if "associate_with_sequencer" in config:
-                    #self.delay.set(config["associate_with_sequencer"])   
-                    print('boop')
+                    self.doAdwin.set(config["associate_with_sequencer"])   
+                if "sequencer_file" in config:
+                    self.sequencer_file.set(config["sequencer_file"])   
+                    self.doAdwin.set(config["associate_with_sequencer"])   
+                if "extra_file" in config:
+                    self.extra_file.set(config["extra_file"])   
                 if "dosave" in config:
-                    #self.delay.set(config["dosave"])   
-                    print('dosave')
+                    self.doSave.set(config["dosave"])   
 
         else:
             print('Canceling loading new configuration file')        
@@ -814,17 +921,17 @@ class App(tk.Tk):
         self.set_state(self.acqtbl,'disabled')
 
 
-        stream_thread = stream(self.handle)        
-        stream_thread.numscans=int(self.numscans.get())
-        stream_thread.scanrate=int(self.scanrate.get())
-        stream_thread.scansperread=int(self.scansperread.get())
-        stream_thread.InputChannels = self.InputChannels
-        stream_thread.TriggerChannel = self.TriggerChannel
-        stream_thread.delay=int(self.delay.get())
-        stream_thread.AcqStatus=self.AcqStatus        
+        self.stream_thread = stream(self.handle)        
+        self.stream_thread.numscans=int(self.numscans.get())
+        self.stream_thread.scanrate=int(self.scanrate.get())
+        self.stream_thread.scansperread=int(self.scansperread.get())
+        self.stream_thread.InputChannels = self.InputChannels
+        self.stream_thread.TriggerChannel = self.TriggerChannel
+        self.stream_thread.delay=int(self.delay.get())
+        self.stream_thread.AcqStatus=self.AcqStatus        
         
-        stream_thread.start()
-        self.process_stream(stream_thread)         
+        self.stream_thread.start()
+        self.process_stream(self.stream_thread)         
         
     def startacq(self):
         self.doAutoAcq = True
@@ -835,32 +942,37 @@ class App(tk.Tk):
         self.forcebutt['state']='disabled'
         self.acqbutt['state']='disabled'          
         self.set_state(self.acqtbl,'disabled')
-        self.dolockbutt['state']='normal'        
         self.doTrigAcq()
 
         
     def doTrigAcq(self):           
-        stream_thread = stream(self.handle)            
-        stream_thread.numscans=int(self.numscans.get())
-        stream_thread.scanrate=int(self.scanrate.get())
-        stream_thread.scansperread=int(self.scansperread.get())
-        stream_thread.InputChannels = self.InputChannels
-        stream_thread.TriggerChannel = self.TriggerChannel                 
-        stream_thread.delay=int(self.delay.get())        
-        stream_thread.AcqStatus=self.AcqStatus        
-        stream_thread.start()
-        self.process_stream(stream_thread)  
+        self.stream_thread = stream(self.handle)            
+        self.stream_thread.numscans=int(self.numscans.get())
+        self.stream_thread.scanrate=int(self.scanrate.get())
+        self.stream_thread.scansperread=int(self.scansperread.get())
+        self.stream_thread.InputChannels = self.InputChannels
+        self.stream_thread.TriggerChannel = self.TriggerChannel                 
+        self.stream_thread.delay=int(self.delay.get())        
+        self.stream_thread.AcqStatus=self.AcqStatus        
+        self.stream_thread.start()
+        self.process_stream(self.stream_thread)  
             
     def stopacq(self):
-        print('stop acquisition')
+        self.stream_thread.goodStream = False
+        #ljm.eStreamStop(self.handle)               
+        #print('stop acquisition')
         
    
     def update(self): 
         for j in range(len(self.InputChannels)):
             self.lines[j].set_data(self.t,self.data[:,j])           
         self.ax1.set_xlim(0,np.amax(self.t))
-        self.ax1.set_ylim(-10,10)       
+        self.ax1.set_ylim(-10,10)   
+        #self.ax1.set_ylim(auto=True)
         self.canvas.draw()   
+
+        if self.doSave.get():
+            self.createOutput()
             
     def on_closing(self):
         self.disconnect()

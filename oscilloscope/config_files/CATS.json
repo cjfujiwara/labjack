@@ -3,18 +3,20 @@
 	"trigger" : "DIO0",
 	"analog_channels" : ["AIN0", "AIN1","AIN2","AIN3","AIN120","AIN121","AIN122",
                   "AIN123","AIN124","AIN125","AIN126","AIN127",
-                  "AIN48","AIN49","AIN50","AIN51","AIN52","AIN53"],
-	"analog_names" : ["Push","MOT","Coil 3","Coil 4","Coil 5","Coil 6","Coil 7",
-         "Coil 8","Coil 9","Coil 10","Coil 11","Coil 12A",
-         "Coil 12B","Coil 13","Coil 14","Coil 15","Coil 16","Kitten"],
+                  "AIN48","AIN49","AIN50","AIN51","AIN52","AIN53","DIO0"],
+	"analog_names" : ["Push Coil","MOT Coil","Coil 3","Coil 4","Coil 5","Coil 6","Coil 7",
+         "Coil 8","Coil 9","Coil 10","Coil 11","Coil 12a",
+         "Coil 12b","Coil 13","Coil 14","Coil 15","Coil 16","kitten","Trigger"],
 	"scanrate" : 1000,
 	"numscans" : 10000,
-	"scansperread" : 1000,
-	"save_root" : "X:\\LabJack\\CATS",
+	"scansperread" : 500,
+	"save_root" : "X:\\LabJackLogs\\CATS",
 	"save_label" : "CATS",
 	"delay" : 500,
 	"associate_with_sequencer" : true,
-	"dosave" : true
+	"sequencer_file" : "Y:\\_communication\\control2.mat",
+	"extra_file" : "Y:\\_communication\\magnetic_transport.mat",
+	"dosave" : false
 	}
 
 

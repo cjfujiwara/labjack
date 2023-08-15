@@ -1,0 +1,17 @@
+{
+	"ip_address" : "192.168.1.150",
+	"trigger" : "DIO0",
+	"analog_channels" : ["AIN0", "AIN1","AIN2","AIN3"],
+	"analog_names" : ["SUM1","X1","SUM2","X2"],
+	"scanrate" : 10000,
+	"numscans" : 10000,
+	"scansperread" : 1000,
+	"save_root" : "X:\\LabJackLogs\\ODTQPD",
+	"save_label" : "ODTQPD",
+	"delay" : 500,
+	"associate_with_sequencer" : true,
+	"sequencer_file" : "Y:\\_communication\\control2.mat",
+	"dosave" : false
+	}
+
+

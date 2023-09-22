@@ -1,8 +1,8 @@
 {
 	"ip_address" : "192.168.1.150",
 	"trigger" : "DIO0",
-	"analog_channels" : ["AIN0", "AIN1","AIN2","AIN3"],
-	"analog_names" : ["SUM1","X1","SUM2","X2"],
+	"analog_channels" : ["AIN0", "AIN1","AIN2","AIN3","AIN4","AIN5","AIN6","AIN7","AIN8"],
+	"analog_names" : ["X1","Y1","SUM1","X2","Y2","SUM2","XLATT","YLATT","ZLATT"],
 	"scanrate" : 10000,
 	"numscans" : 10000,
 	"scansperread" : 1000,

@@ -1,0 +1,17 @@
+{
+	"ip_address" : "192.168.1.126",
+	"trigger" : "DIO1",
+	"analog_channels" : ["AIN0", "AIN1","DIO0","DIO1"],
+	"analog_names" : ["old","new","60 Hz","Trigger"],
+	"scanrate" : 2000,
+	"numscans" : 100000,
+	"scansperread" : 1000,
+	"save_root" : "X:\\LabJackLogs\\field",
+	"save_label" : "fb_sensor_test",
+	"delay" : 500,
+	"associate_with_sequencer" : true,
+	"sequencer_file" : "Y:\\_communication\\control2.mat",
+	"dosave" : false
+	}
+
+

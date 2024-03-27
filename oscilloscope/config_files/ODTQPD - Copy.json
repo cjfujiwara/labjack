@@ -1,0 +1,17 @@
+{
+	"ip_address" : "192.168.1.145",
+	"trigger" : "DIO0",
+	"analog_channels" : ["AIN13","AIN12","AIN13"],
+	"analog_names" : ["minimag","rooftop","minimag"],
+	"scanrate" : 2000,
+	"numscans" : 100000,
+	"scansperread" : 1000,
+	"save_root" : "X:\\LabJackLogs\\cjftest",
+	"save_label" : "cjftest",
+	"delay" : 50,
+	"associate_with_sequencer" : true,
+	"sequencer_file" : "Y:\\_communication\\control2.mat",
+	"dosave" : false
+	}
+
+

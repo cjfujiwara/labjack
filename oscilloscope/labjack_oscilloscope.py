@@ -675,6 +675,7 @@ class App(tk.Tk):
         self.canvas.draw()
         
     def makeOutputDirectory(self,y,m,d):
+        print(self.SaveRoot.get())
         if not os.path.isdir(self.SaveRoot.get()):
             os.mkdir(self.SaveRoot.get())
         
@@ -760,20 +761,15 @@ class App(tk.Tk):
 
     def configTrig(self):
         address = ljm.nameToAddress(self.TriggerChannel)[0]
-        ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", address);
-    
+        ljm.eWriteName(self.handle, "STREAM_TRIGGER_INDEX", address);    
         # Clear any previous settings on triggerName's Extended Feature registers
-        ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 0);
-    
+        ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 0);    
         # 5 enables a rising or falling edge to trigger stream
         #ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 4);
         #ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 1);
-        
         ljm.eWriteName(self.handle, "%s_EF_INDEX" % self.TriggerChannel, 12);
         ljm.eWriteName(self.handle, "%s_EF_CONFIG_A" % self.TriggerChannel, 0);       
-        ljm.eWriteName(self.handle, "%s_EF_CONFIG_B" % self.TriggerChannel, 1);       
-
-
+        ljm.eWriteName(self.handle, "%s_EF_CONFIG_B" % self.TriggerChannel, 1); 
         # Enable
         ljm.eWriteName(self.handle, "%s_EF_ENABLE" % self.TriggerChannel, 1);
         

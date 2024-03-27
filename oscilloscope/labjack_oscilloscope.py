@@ -279,32 +279,25 @@ class App(tk.Tk):
     
     def create_frames(self):        
         self.Fopt = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fopt.pack(side='left',anchor='nw',fill='y')      
-        
+        self.Fopt.pack(side='left',anchor='nw',fill='y')  
         # Connect Frame
         self.Fconnect = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fconnect.grid(row=1,column=1,sticky='we')
-        
+        self.Fconnect.grid(row=1,column=1,sticky='we')        
         # Voltage output
         self.Foutput = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Foutput.grid(row=2,column=1,sticky='we')
-        
+        self.Foutput.grid(row=2,column=1,sticky='we')       
         # Acquisition
         self.Facquire = tk.Frame(self.Fopt,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Facquire.grid(row=3,column=1,sticky='we')        
-        
+        self.Facquire.grid(row=3,column=1,sticky='we')   
         # Right Frame
         self.Fright = tk.Frame(self,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
         self.Fright.pack(side='right',fill='both',expand=1)
-        
         # Config File
         self.Fconfig = tk.Frame(self.Fright,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fconfig.pack(side='top',fill='x',expand=0)        
-        
+        self.Fconfig.pack(side='top',fill='x',expand=0)   
         # Saving
         self.Fsave = tk.Frame(self.Fright,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
-        self.Fsave.pack(side='top',fill='x',expand=0)              
-       
+        self.Fsave.pack(side='top',fill='x',expand=0)     
         # Plots
         self.Fplot = tk.Frame(self.Fright,bd=1,bg="white",highlightbackground="grey",highlightthickness=2)
         self.Fplot.pack(side='bottom',fill='both',expand=1)
@@ -312,27 +305,23 @@ class App(tk.Tk):
 
     def defaultSettings(self):        
         self.connectStr.set('192.168.1.125')   
-        self.connectMode.set(self.connectOptions[0])
-        
+        self.connectMode.set(self.connectOptions[0])        
         self.TriggerChannel = "DIO0"
         self.InputChannels = ["AIN0", "AIN1"]
         self.InputNames = ["AIN0","AIN1"]
         self.OutputChannel = "DAC0"        
         self.doSave.set(0)
         self.doAdwin.set(0)              
-        self.configuration_file = 'none'
-                
+        self.configuration_file = 'none'                
         # Output voltage default values
         self.output.set('??')
         self.outputMax.set(2500)
-        self.outputMin.set(0)    
-        
+        self.outputMin.set(0)            
         self.scanrate.set(20000)
         self.numscans.set(5500)
         self.scansperread.set(5500)
         self.delay.set(500)
-        
-        
+                
     def set_output_state(self,state):
         self.bDa['state'] = state
         self.bDb['state'] = state
@@ -344,61 +333,48 @@ class App(tk.Tk):
     def create_widgets(self):
         # Config Label
         tk.Label(self.Fconfig,text='Configuration File',font=(font_name_lbl,"12"),
-                 bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=1,stick='w') 
-        
+                 bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=1,stick='w')         
         # Load new configuration file        
         self.LoadConfig=tk.Button(self.Fconfig,text="load",
                   font=(font_name,"10"),width=4,bd=2,command=self.loadfile,state='active')
-        self.LoadConfig.grid(row = 1, column=2,sticky='w')
-        
+        self.LoadConfig.grid(row = 1, column=2,sticky='w')        
         # Configuration file
         self.ConfigFile = tk.Label(self.Fconfig,font=(font_name,"10"),
                  bg='white',justify='left',bd=0,fg='black',text='none')
-        self.ConfigFile.grid(row=1,column=3,columnspan=3,stick='w')       
-        
+        self.ConfigFile.grid(row=1,column=3,columnspan=3,stick='w')
         # Saving Label
         tk.Label(self.Fsave,text='Saving',font=(font_name_lbl,"12"),
-                 bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=1,stick='w') 
-        
+                 bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=1,stick='w')         
         tk.Checkbutton(self.Fsave, text='save?',variable=self.doSave, onvalue=True, offvalue=False, 
-                       ).grid(row=1,column=2,columnspan=1,stick='w') 
-        
+                       ).grid(row=1,column=2,columnspan=1,stick='w')         
         tk.Checkbutton(self.Fsave, text='associate with sequencer?',variable=self.doAdwin, onvalue=True, offvalue=False, 
-                       ).grid(row=1,column=3,columnspan=1,stick='w') 
-        
+                       ).grid(row=1,column=3,columnspan=1,stick='w')         
         # Load new configuration file        
         self.LoadConfig=tk.Button(self.Fsave,text="load",
                   font=(font_name,"10"),width=4,bd=2,command=self.choosesavedir,state='active')
-        self.LoadConfig.grid(row = 1, column=4,sticky='w')
-        
+        self.LoadConfig.grid(row = 1, column=4,sticky='w')        
         # Configuration file
         self.SaveDirectory = tk.Label(self.Fsave,font=(font_name,"10"),
                  bg='white',justify='left',bd=0,fg='black',text='none')
-        self.SaveDirectory.grid(row=1,column=5,columnspan=1,stick='w')    
-        
-        
+        self.SaveDirectory.grid(row=1,column=5,columnspan=1,stick='w') 
         # Connect Label
         tk.Label(self.Fconnect,text='Labjack Connection',font=(font_name_lbl,"12"),
-                 bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=3,stick='w') 
-        
+                 bg='white',justify='left',bd=0).grid(row=1,column=1,columnspan=3,stick='w')         
         # Connect Status
         self.ConnectStatus = tk.Label(self.Fconnect,font=(font_name,"10"),
                  bg='white',justify='left',bd=0,fg='red',text='disconnected')
-        self.ConnectStatus.grid(row=2,column=1,columnspan=3,stick='w')         
-        
+        self.ConnectStatus.grid(row=2,column=1,columnspan=3,stick='w') 
         # Help Button
         tk.Button(self.Fconnect,text='help',font=(font_name,"10"),
                   width=6,bd=3).grid(row=3,column=1)        
         # Connect
         self.b1=tk.Button(self.Fconnect,text="connect",bg=_from_rgb((80, 200, 120)),
                   font=(font_name,"10"),width=11,bd=3,command=self.connect)
-        self.b1.grid(row=3,column=2,sticky='EW')   
-        
+        self.b1.grid(row=3,column=2,sticky='EW') 
         # Disconnect
         self.b2=tk.Button(self.Fconnect,text="disconnect",bg=_from_rgb((255, 102, 120)),
                   font=(font_name,"10"),width=11,bd=3,command=self.disconnect,state='disabled')
         self.b2.grid(row = 3, column=3,sticky='NSEW')
-        
         # Connect options       
         tk.OptionMenu(self.Fconnect, self.connectMode, *self.connectOptions).grid(
             row=4,column=1,columnspan=3,sticky='NSEW')  
@@ -778,10 +754,6 @@ class App(tk.Tk):
         
     def choosesavedir(self):
         print('what what')
-        
-        
-
-
         
     def loadfile(self):
         

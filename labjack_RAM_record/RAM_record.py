@@ -8,7 +8,8 @@ un='fujiwa27'
 sname='individual.utoronto.ca'
 
 # LabJack
-myip="192.168.1.145"
+t7name="OpticalPower"
+myip="192.168.1.126"
 
 # Log Locations
 drv='/mnt/Y/'
@@ -24,6 +25,9 @@ import csv
 import os
 import time
 from labjack import ljm
+import numpy as np
+os.system("")
+import scipy
 
 #====================================================================
 # Labjack connection
@@ -63,16 +67,10 @@ print("Creating sensor objects...")
 
 # Create list of all the flow meter objects
 fs=[]
-fs.append(photodiode("MOT Trap","USER_RAM1_F32",1.00))
-fs.append(photodiode("MOT Repump","USER_RAM0_F32",1.00)) 
-fs.append(photodiode("K Trap Shutter","USER_RAM0_I32",1.00)) 
-fs.append(photodiode("Rb Trap Shutter","USER_RAM1_I32",1.00)) 
-fs.append(photodiode("K Ready","USER_RAM2_I32",1.00)) 
-fs.append(photodiode("Rb Ready","USER_RAM3_I32",1.00)) 
-fs.append(photodiode("MOT Trap   K","USER_RAM3_F32",1.00))
-fs.append(photodiode("MOT Repump K","USER_RAM2_F32",1.00)) 
-fs.append(photodiode("MOT Trap   Rb","USER_RAM5_F32",1.00))
-fs.append(photodiode("MOT Repump Rb","USER_RAM4_F32",1.00)) 
+fs.append(photodiode("Sense Field (V)","USER_RAM0_F32",1.00))
+fs.append(photodiode("PID Status","USER_RAM1_F32",1.00)) 
+fs.append(photodiode("Output","USER_RAM2_F32",1.00)) 
+
 ains=[]
 
   
@@ -154,7 +152,7 @@ import base64
 from ftplib import FTP
 
 ftp=FTP(sname)
-ftp.login(user=un,passwd=base64.b64decode(pw).decode('utf-8'))
+#ftp.login(user=un,passwd=base64.b64decode(pw).decode('utf-8'))
 
 def ftpupdate(V):
     fname='pds'
@@ -167,63 +165,126 @@ def ftpupdate(V):
     file.close()    
     filename=fname
     with open(filename, "rb") as file:        
-        ftp.storbinary("STOR %s" % filename, file)
-  
+        ftp.storbinary("STOR %s" % filename, file)  
 
 
 #=============================================================================
 # Update Function
 #=============================================================================
-
+def clear_line(n=1):
+    LINE_UP = '\033[1A'
+    LINE_CLEAR = '\x1b[2K'
+    for i in range(n):
+        print(LINE_UP, end=LINE_CLEAR)
+        
 numFrames=len(ains)
-tLast = datetime.datetime.now().timestamp()
 
+N = 1000
+array = np.zeros((N,4), dtype=float) 
+myind = 0
+
+tNow = datetime.datetime.now().timestamp()   
+tLast = datetime.datetime.now().timestamp()   
+
+global trig_last
+trig_last = False
 
 def timeUpdate():
     global tLast
+    global myind
+    global array 
+    global trig_last 
     
-    # Grab other labjack voltages   
-    tNow = datetime.datetime.now().timestamp()
-    #V=grabVoltages();   # Grab all the voltages  
+    # Get the time  
+    tNow = datetime.datetime.now().timestamp()   
     
-
-    
-    V = ljm.eReadNames(T7, numFrames, ains)
-    
+    # Read values
+    V = ljm.eReadNames(T7, numFrames, ains)    
     dT = (tNow-tLast)
+    
     tLast = tNow
     
     # Update the clock 
-    string = datetime.datetime.now().strftime('%Y.%m.%d %I:%M:%S.%f %p') 
-    lbl.config(text = string + ' (' + str(round(dT*1000)) + ' ms)')  
+    string = datetime.datetime.now().strftime('%H:%M:%S.%f') 
+    string2 =  string + ' (' + "%.1f" % round(dT*1000,1) + ' ms)'    
+    string2 = string2 + ", trig=" + "%u" %  round(V[1])
+    string2 = string2 + ", sense=" + "%.4f" % round(V[0],4) + ' V'   
+    string2 = string2 + ", out=" + "%.4f" % round(V[2],4) + ' V'  
+    
+    # Permute the data buffer
+    array = np.roll(array,1,axis=0)
+    array[0,0] = tNow
+    array[0,1] = V[1]
+    array[0,2] = V[0]
+    array[0,3] = V[2]   
+    
+    # The current PID status
+    trig_now = bool(round(V[1]))    
 
-
-    # Reset Ready values    
-    if ((V[4]==1) & (V[5]==1)):
-        ljm.eWriteNames(T7, 2, ['USER_RAM2_I32', 'USER_RAM3_I32'],[0, 0])
-      
-    mainStr = ''
-    # Create updated string
-    for f,val in zip(fs,V):
-        val=val/f.Scale                
-        mainStr = mainStr + (f.name).ljust(15,' ') + "{0:.1f}".format(val*1000) + ' mV' + '\n'
-
-    # Update web server
-    ftpupdate(V)            
-
-    # Assign String
-    m2.config(text=mainStr,justify='l')
-    m2.after(200, timeUpdate) 
-
+    
+    
+    # Trigger is going from ON to OFF ==> SAVE THE DATA OR SOMETHING
+    if not(trig_now) and trig_last:
+    #if myind == N-1:
+        data=array
+        # Get subset of data where where trig is high
+        data = array[np.nonzero(array[:,1])[0],:] 
+        # Sort data by acquisition time (since data buffer is permuted)
+        data = data[data[:,0].argsort(),:]
+        output = dict()
+        output['data'] = data
+        scipy.io.savemat('bob.mat',output)   
         
+        
+        dt0 = 50
+        t = (data[:,0]-data[1,0])*1000
+        inds = t>=dt0
+        
+        sensemean = data[inds,2].mean()
+        sensestd = data[inds,2].std()
+        
+        outmean = data[inds,3].mean()
+        outstd = data[inds,3].std()
+        
+        string3 = 'Last Data'
+        string3 =  string3 + string + ", sense=" + "%.3f" % round(sensemean,3) + ' +- ' + \
+            "%.3f" % round(sensestd,3) + ' V'
+        string3 =  string3 + ", out=" + "%.3f" % round(outmean,3) + ' +- ' + \
+            "%.3f" % round(outstd,3) + '  V'
+        
+        clear_line()
+        clear_line()
+        print(string3)
+    else:
+        clear_line()
+        
+    myind = myind + 1
+    
+    if myind == N:
+        myind = 0
+        
+ 
+    # Print current value
+    print(string2)
+
+    
+    # Update Trigger
+    trig_last = trig_now
+    
+    # Wait and update
+    time.sleep(0.000001)
+    
+    #lbl.config(text = string2 + ' (' + str(round(dT*1000)) + ' ms)')  
+    #print()
+    m2.after(0, timeUpdate) 
+
 #=============================================================================
 # GUI Objects
 #=============================================================================
 # Main window
 app = tkinter.Tk()
 app.title("Photodiode Monitor")
-app.geometry("1200x1000")
-
+app.geometry("800x300")
 
 # Clock Frame
 top_frame = tkinter.Frame(app,bd=1,bg="white")
@@ -249,8 +310,12 @@ time.sleep(.5)
 # Main Loop
 #=============================================================================
 
+print('Last Data : None')
+print('this gets deleted')
+
 # Initiate clock fucntions
 timeUpdate()
+
 
 # Start the GUI (dont know what this really does)
 app.mainloop()

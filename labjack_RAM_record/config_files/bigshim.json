@@ -1,0 +1,13 @@
+{
+	"ip_address" : "192.168.1.126",
+	"trigger" : "USER_RAM1_F32",
+	"channels" : ["USER_RAM0_F32","USER_RAM2"]
+	"names" : ["sense_V", "out_V"]	
+	"save_root" : "X:\\LabJackLogs\\bigshim,
+	"save_label" : "bigshim",
+	"dosave" : true,
+	"prebuffer" : 20,
+	"postbuffer" : 20
+	}
+
+

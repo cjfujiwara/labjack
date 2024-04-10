@@ -232,8 +232,10 @@ def timeUpdate():
         # Sort data by acquisition time (since data buffer is permuted)
         data = data[data[:,0].argsort(),:]
         output = dict()
+        output['acquisitiondate'] = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') 
+
         output['data'] = data
-        scipy.io.savemat('bob.mat',output)   
+        scipy.io.savemat('lastlog.mat',output)   
         
         
         dt0 = 50

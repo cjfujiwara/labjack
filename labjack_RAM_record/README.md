@@ -32,3 +32,6 @@ This is a particularly useful regime because :
 (2) The ambient field is very small (10 mG- 20 mG) (benefits from low noise electronics --> digital is better)
 (3) The way we measure the ambient field is complicated. (The field senses all fields from magnets
 	--> digital solution allows for many different test condidtions).
+
+INSTRUCTIONS ON HOW TO RUN:
+

@@ -37,7 +37,7 @@ print(vsense)
 
 local n = 0
 local Nmax = 2000
-local vset = -7
+local vset = -7.4
 --vset = 5.6
 --vset2 = 5.7
 --vset1 = 5.6

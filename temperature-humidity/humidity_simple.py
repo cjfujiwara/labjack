@@ -19,24 +19,9 @@ drv = 'X:\\'
 fldr = 'LabJackLogs\\Temperature-Humidity'
 
 import sys
-sys.path.append("X:\LabJackLogs\\_labjack_keys")
-import key_temp_humidity
+sys.path.append("X:\\LabJackLogs\\_labjack_keys")
+from key_temp_humidity import *
 
-keys = key_temp_humidity.mykeys()
-
-
-sn = keys['sn']
-t7name = keys['t7name']
-myip=keys['myip']
-slack_token=keys['slack_token']
-pw = keys['pw']
-un=keys['un']
-sname=keys['sname']
-
-
-#print(keys['sn'])
-
-#python "X:\LabJackLogs\\_labjack_keys\\key_temp_humidity"
 
 
 
@@ -248,12 +233,12 @@ def doLog(temps,rhs):
     
     # Choose the write mode depending on the read headers        
     if headers==fields:
-        with open(fname,'a') as f:
+        with open(fname,'a',newline='') as f:
             writer = csv.writer(f)
             writer.writerow(data)
             
     else:
-        with open(fname,'w') as f:
+        with open(fname,'w',newline='') as f:
             writer = csv.writer(f)
             print('Overwriting old log file as headers dont agree')
             writer.writerow(fields)  

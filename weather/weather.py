@@ -12,7 +12,7 @@
 #===========================================================
 
 drv = 'X:\\'
-fldr = 'LabJackLogs\\Temperature-Humidity'
+fldr = 'LabJackLogs\\TorontoWeather'
 
 import sys
 sys.path.append("X:\\LabJackLogs\\_labjack_keys")

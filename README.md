@@ -22,5 +22,8 @@ This will tell you how to instal lthe python drivers
 https://github.com/labjack/labjack-ljm-python
 
 Then I recommend installing scipy and matplotlib
+
 conda install -c anaconda scipy
+
 conda install -c conda-forge matplotlib
+

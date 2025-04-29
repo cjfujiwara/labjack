@@ -2,6 +2,19 @@
 
 Author : C Fujiwara
 
+To get things started on Windows
+
+Install python manager (for this example, Ananconda)
+
+Install LJM Installers
+https://support.labjack.com/docs/ljm-software-installer-downloads-t4-t7-t8-digit
+For windows. This will install :
+- Basic drivers
+- LogJM useful for debugging
+- https://support.labjack.com/docs/ljlogm-basics-guide
+- Kipling - useful for debugging, and configuring stuff
+- https://support.labjack.com/docs/kipling
+
 This repository is a collection of code to run the labjack T7 pro in an laboratory setting.  The main applications so far as :
 
 (1) As a transfer cavity lock with 1 Hz feedback

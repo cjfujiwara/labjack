@@ -15,6 +15,17 @@ For windows. This will install :
 - Kipling - useful for debugging, and configuring stuff
 - https://support.labjack.com/docs/kipling
 
+- One you install that stuff. Now you can interact with the labjack normally. BUT we want to run code on python for specific tasks. How do you do that? Well, with anaconda + spyder or whatever thing you want.
+
+- Packages that you will need to install
+
+python labjack driver https://github.com/labjack/labjack-ljm-python
+
+pip install labjack-ljm
+conda install -c anaconda scipy
+conda install -c conda-forge matplotlib
+- 
+
 This repository is a collection of code to run the labjack T7 pro in an laboratory setting.  The main applications so far as :
 
 (1) As a transfer cavity lock with 1 Hz feedback
@@ -23,8 +34,4 @@ This repository is a collection of code to run the labjack T7 pro in an laborato
 While all of these codes could be separated, I have elected to keep all these code packages as single unit because the code based around them are all relatively similar. Furthermore, the functionality of these applications fall into a general broad category of laboratory tools. 
 
 
-https://github.com/labjack/labjack-ljm-python
 
-pip install labjack-ljm
-conda install -c anaconda scipy
-conda install -c conda-forge matplotlib

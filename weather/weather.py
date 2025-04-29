@@ -71,11 +71,11 @@ def doLog():
     
     # Choose the write mode depending on the read headers        
     if headers==fields:
-        with open(fname,'a') as f:
+        with open(fname,'a',newline='') as f:
             writer = csv.writer(f)
             writer.writerow(data)            
     else:
-        with open(fname,'w') as f:
+        with open(fname,'w',newline='') as f:
             writer = csv.writer(f)
             print('Overwriting old log file as headers dont agree')
             writer.writerow(fields)  

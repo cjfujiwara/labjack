@@ -19,6 +19,8 @@ For windows. This will install :
 
 
 This will tell you how to instal lthe python drivers
+https://support.labjack.com/docs/python-for-ljm-windows-mac-linux
+
 https://github.com/labjack/labjack-ljm-python
 
 Then I recommend installing scipy and matplotlib

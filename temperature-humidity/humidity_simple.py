@@ -18,6 +18,25 @@
 drv = 'X:\\'
 fldr = 'LabJackLogs\\Temperature-Humidity'
 
+import sys
+sys.path.append("X:\LabJackLogs\\_labjack_keys")
+import key_temp_humidity
+
+keys = key_temp_humidity.mykeys()
+
+
+sn = keys['sn']
+t7name = keys['t7name']
+myip=keys['myip']
+slack_token=keys['slack_token']
+pw = keys['pw']
+un=keys['un']
+sname=keys['sname']
+
+
+#print(keys['sn'])
+
+#python "X:\LabJackLogs\\_labjack_keys\\key_temp_humidity"
 
 
 

@@ -2,6 +2,8 @@
 
 Author : C Fujiwara
 
+This repository is a collection of code used to run various labjack (and labjack adjacent projects) in the Thywissen Lab at the University for Toronto.
+
 To get things started on Windows
 
 Install python manager (for this example, Ananconda)

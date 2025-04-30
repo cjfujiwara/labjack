@@ -14,6 +14,8 @@ at the location of the atoms. Thus, stabilizing the magnetic field at the sensor
 will create a bias field at the sensor location.  Thus, the field must be stabilized at a specific setpoint.  This also means that the sensor has be to be sufficnetly far away from any electromagnets so 
 as not require a stabilization field outside of the 1G range of the device.
 
+An initial discussion of the Big Shim can be found [here](https://docs.google.com/presentation/d/1-JlIjbozoPRU63ZKhApEn-joSrciZfajlC-b8FjDk5w/edit#slide=id.g2b14b3b4ab5_0_38)
+
 ## Shim Coil
 The shim coils propeties will be listed here, as well as some MATLAB code.
 

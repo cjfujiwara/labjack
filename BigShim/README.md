@@ -36,5 +36,6 @@ This code is the key to running the Big Shim PID. This does the following
   (3) have it automatically run on device restart
 
 ## Python Monitoring Code
+The python monitoring code BigShim_Monitor.py is a simple piece of code that reads in the RAM values as specified by the LUA PID Code.  It then displays some rumintenary information about the PID performance. It also saves the most recent PID trigger to file as lastlog.mat
 
 ## 60 Hz Feedforward

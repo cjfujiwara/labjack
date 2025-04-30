@@ -3,20 +3,13 @@
 #====================================================================
 
 # LabJack
-t7name="OpticalPower"
 myip="192.168.1.126"#470024251 for the lock
-
-# Log Locations
-drv='/mnt/Y/'
-fldr='LabJack/Logging/Photodiode'
 
 #====================================================================
 # Import Packages
 #====================================================================
 
-import tkinter
 import datetime
-import csv
 import os
 import time
 from labjack import ljm
@@ -36,47 +29,8 @@ print("Opened a LabJack with Device type: %i, Connection type: %i,\n"
       "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" %
       (info[0], info[1], info[2], ljm.numberToIP(info[3]), info[4], info[5]))
 
-ps=[]
-pFs=[]
-Npoints=300
-
-#====================================================================
-# Photo diodes
-#====================================================================    
-    
-class photodiode:
-    def __init__(self, name,AIN,c):
-        self.name=name
-        self.AIN=AIN
-        self.Scale=c
-        
-    def grabPower(self):
-        v=ljm.eReadName(T7,self.AIN)
-        F=v/self.Scale
-        return F
-        
-#====================================================================
-# Initiate Sensors
-#====================================================================    
-print("Creating sensor objects...")    
-
-# Create list of all the flow meter objects
-fs=[]
-fs.append(photodiode("Sense Field (V)","USER_RAM0_F32",1.00))
-fs.append(photodiode("PID Status","USER_RAM1_F32",1.00)) 
-fs.append(photodiode("Output","USER_RAM2_F32",1.00)) 
-
-ains=[]
-
-  
-for f in fs:
-    ains.append(f.AIN)
-    
-def grabVoltages():
-    numFrames=len(ains)
-    results = ljm.eReadNames(T7, numFrames, ains)
-    return results   
-
+# Channels to read
+ains=["USER_RAM0_F32","USER_RAM1_F32","USER_RAM2_F32"]
 
 #=============================================================================
 # Update Function
@@ -129,9 +83,7 @@ def timeUpdate():
     array[0,3] = V[2]   
     
     # The current PID status
-    trig_now = bool(round(V[1]))    
-
-    
+    trig_now = bool(round(V[1]))        
     
     # Trigger is going from ON to OFF ==> SAVE THE DATA OR SOMETHING
     if not(trig_now) and trig_last:
@@ -161,9 +113,7 @@ def timeUpdate():
         string3 =  string + ", sense=" + "%.3f" % round(sensemean,3) + ' +- ' + \
             "%.3f" % round(sensestd,3) + ' V'
         string3 =  string3 + ", out=" + "%.3f" % round(outmean,3) + ' +- ' + \
-            "%.3f" % round(outstd,3) + '  V'
-        
-        #clear_line()
+            "%.3f" % round(outstd,3) + '  V'        
         clear_line()
         print(string3)
     else:
@@ -184,51 +134,14 @@ def timeUpdate():
     
     # Wait and update
     time.sleep(0.000001)
-    
-    #lbl.config(text = string2 + ' (' + str(round(dT*1000)) + ' ms)')  
-    #print()
-    #m2.after(0, timeUpdate) 
 
-#=============================================================================
-# GUI Objects
-#=============================================================================
-# Main window
-#app = tkinter.Tk()
-#app.title("Photodiode Monitor")
-#app.geometry("800x300")
 
-# Clock Frame
-#top_frame = tkinter.Frame(app,bd=1,bg="white")
-#top_frame.pack(anchor="nw",expand=False,fill="x",side="top")
 
-# Add clock 
-#lbl = tkinter.Label(top_frame,text="Hello",bg="white",font=("DejaVu Sans Mono",18))
-#lbl.pack(side="left",anchor="nw")
-
-# Data Frame
-#left_frame = tkinter.Frame(app,bd=1,bg="white")
-#left_frame.pack(anchor="nw",expand=True,fill="both",side="top")
-
-# Main string output
-#m2 = tkinter.Label(left_frame,text="text",bg="white",font=("DejaVu Sans Mono",50))
-#m2.pack(side="left",anchor='nw')    
-
-# Wait a second
-#time.sleep(.5)
-
-        
 #=============================================================================
 # Main Loop
 #=============================================================================
 
 print('this gets deleted')
-
-# Initiate clock fucntions
-#timeUpdate()
-
-
-# Start the GUI (dont know what this really does)
-#app.mainloop()
 
 while True:
     timeUpdate()
@@ -237,6 +150,3 @@ while True:
 print("Closing the labjack") 
 ljm.close(T7)
 print("I think the labjack closed?")
-
-# Stop the FTP update
-#ftp.quit()

@@ -35,7 +35,9 @@ conda install -c conda-forge matplotlib
 
 ## Projects
 
-HVAC Monitoring : temperature and humidity
+### HVAC Monitoring 
+We use a labjack in conjunction with EL-1050
+: temperature and humidity
 Flow rate Monitoring
 magnet temperature monitoring
 general purpose oscilloscope

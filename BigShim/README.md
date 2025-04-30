@@ -14,3 +14,14 @@ at the location of the atoms. Thus, stabilizing the magnetic field at the sensor
 will create a bias field at the sensor location.  Thus, the field must be stabilized at a specific setpoint.  This also means that the sensor has be to be sufficnetly far away from any electromagnets so 
 as not require a stabilization field outside of the 1G range of the device.
 
+## Shim Coil
+The shim coils propeties will be listed here, as well as some MATLAB code.
+
+## Driving Electronics
+
+## 60 Hz Feedforward
+
+## LUA PID Code
+
+## Python Monitoring Code
+

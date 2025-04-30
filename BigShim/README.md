@@ -45,4 +45,4 @@ The python monitoring code BigShim_Monitor.py is a simple piece of code that rea
 ## 60 Hz Feedforward
 In addition to a direct feedback, we also use a 60 Hz feedforward.  Because the 60 Hz from the wall can vary throughout the day, we generated a "fake" 60 Hz sinuidoid which comes from a frequency generator.  The frequency generator is triggered using a simple trigger detector which we plug into the wall.  This fake 60 Hz sinuidoid is then read by the labjack and summed with the output. This causes some digitization issues, and in practice it would be best to simply sum the feedforward AFTER the labjack output with an analog circuit.
 
-[feedforward_trigger](pictures/feedforward_trigger)
+[feedforward_trigger](pictures/feedforward_trigger.jpg)

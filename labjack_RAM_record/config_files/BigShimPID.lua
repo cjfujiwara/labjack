@@ -23,7 +23,8 @@ local RAM_OUT = 46004   -- RAM for storing the output voltage
 local DAC_OUT = 1000    -- DAC address
 local AIN_FF = 0        -- AIN address for feedforward
 local AIN_SENSE = 2     -- AIN address for sense
-local DIN_PID = 2000    -- DIO address for PID mode
+local DIN_PID_sp = 2000    -- DIO address for PID mode single plane
+local DIN_PID_stripe = 2001    -- DIO address for PID mode stripe
 
 local PIDmode = 1
 
@@ -37,25 +38,33 @@ print(vsense)
 
 local n = 0
 local Nmax = 2000
-local vset = -7.4
---vset = 5.6
---vset2 = 5.7
---vset1 = 5.6
---vset = 3.4
+local vset_sp = -7.6      -- setpoint for single plane
+local vset_stripe = -8    -- setpoint for stripes
+
 while true do
   if checkInterval(0) then
-    PIDmode = MB.R(DIN_PID,0)   -- read in PID status DIO
+    PIDmode_sp = MB.R(DIN_PID_sp,0)   -- read in PID status DIO (single plane)
+    PIDmode_stripe = MB.R(DIN_PID_stripe,0)
     --PIDmode = 1
     vsense = MB.R(AIN_SENSE,3)  -- read in sense voltage
     vff = MB.R(AIN_FF,3)        -- read in feedforward voltage
     vout = 2.5 + vff            -- default output is halfwy plus feedforward
-    if PIDmode == 1 then
-      err0 = vset - vsense -- calculate error
+    if PIDmode_sp == 1 and PIDmode_stripe == 0 then -- if doing single plane
+      PIDmode = 1
+      err0 = vset_sp - vsense -- calculate error
       -- Calculate new output using digital PI values
       u0 = u1 + 0.5*(ki*Ts+2*kp)*err0 + 0.5*(ki*Ts-2*kp)*err1 
       u1 = u0       -- current output becomes previous output      
       err1 = err0   -- current error becomes previous error
-    else -- if the PID is disabled
+    elseif PIDmode_sp == 0 and PIDmode_stripe == 1 then -- if doing stripe
+      PIDmode = 2
+      err0 = vset_stripe - vsense -- calculate error
+      -- Calculate new output using digital PI values
+      u0 = u1 + 0.5*(ki*Ts+2*kp)*err0 + 0.5*(ki*Ts-2*kp)*err1 
+      u1 = u0       -- current output becomes previous output      
+      err1 = err0   -- current error becomes previous error
+    else -- if the PID is disabled or both channels are high (bug)
+      PIDmode = 0
       u0 = 0        -- Fix the PID output level at 0
       err0 = 0      -- reset the current error
       err1 = 0      -- reset the previous error

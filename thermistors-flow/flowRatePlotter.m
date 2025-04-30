@@ -15,7 +15,7 @@ fldr='X:\LabJackLogs\thermistors-flow';
 
 
 % Start and End times to plot YYYY mm DD HH MM SS
-t1=[2025 04 29 00 00 00];
+t1=[2025 01 05 00 00 00];
 t2=[2025 04 29 23 59 59];
 
 % Resampling time in minutes (for average)

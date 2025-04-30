@@ -2,7 +2,11 @@
 
 Author : C Fujiwara
 
+This repository is a collection of code used to run various labjack (and labjack adjacent projects) in the Thywissen Lab at the University for Toronto.
+
 To get things started on Windows
+
+## Installing Drivers and Software
 
 Install python manager (for this example, Ananconda)
 
@@ -28,4 +32,17 @@ Then I recommend installing scipy and matplotlib
 conda install -c anaconda scipy
 
 conda install -c conda-forge matplotlib
+
+## Projects
+
+HVAC Monitoring : temperature and humidity
+Flow rate Monitoring
+magnet temperature monitoring
+general purpose oscilloscope
+CATs
+QPD
+cavity stabilization lock 
+locking the Vortex laser using an absolute frequency reference (Vutha wavemeter)
+stabilization of external magnetic fields
+
 

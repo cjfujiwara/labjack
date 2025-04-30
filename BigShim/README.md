@@ -1,5 +1,5 @@
 # BigShim
-This code operates the BigShim which the lattice lab uses to cancels out drifts in Earth's magnetic field.
+This code operates the BigShim which the lattice lab uses to cancels out drifts in the local field in the lab (mainly electrical power and TTC).
 
 The basic operating principle uses a [FL1-100](https://www.stefan-mayer.com/en/products/magnetometers-and-sensors/fluxgate-sensor-fl1-100.html) Flux Gate
 magnetic field sensor. Some important properties

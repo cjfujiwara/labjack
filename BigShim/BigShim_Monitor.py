@@ -99,21 +99,15 @@ def timeUpdate():
         data = data[data[:,0].argsort(),:]
         output = dict()
         output['acquisitiondate'] = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') 
-
         output['data'] = data
-        scipy.io.savemat('lastlog.mat',output)   
-        
-        
+        scipy.io.savemat('lastlog.mat',output)       
         dt0 = 50
         t = (data[:,0]-data[1,0])*1000
-        inds = t>=dt0
-        
+        inds = t>=dt0        
         sensemean = data[inds,2].mean()
         sensestd = data[inds,2].std()
-        
         outmean = data[inds,3].mean()
-        outstd = data[inds,3].std()
-        
+        outstd = data[inds,3].std()        
         string3 =  string + ", sense=" + "%.3f" % round(sensemean,3) + ' +- ' + \
             "%.3f" % round(sensestd,3) + ' V'
         string3 =  string3 + ", out=" + "%.3f" % round(outmean,3) + ' +- ' + \
@@ -126,16 +120,13 @@ def timeUpdate():
     myind = myind + 1
     
     if myind == N:
-        myind = 0
-        
+        myind = 0        
  
     # Print current value
     print(string2)
-
     
     # Update Trigger
-    trig_last = trig_now
-    
+    trig_last = trig_now    
     # Wait and update
     time.sleep(0.000001)
 

@@ -34,6 +34,7 @@ conda install -c anaconda scipy
 conda install -c conda-forge matplotlib
 
 ## Projects
+We use the labjack for a variety of projects in the laboratory.  Here are they.
 
 [HVAC Monitoring](temperature-humidity/README.md) - used everyday (circa 2025)
 

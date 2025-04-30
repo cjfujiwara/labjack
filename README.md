@@ -35,4 +35,14 @@ conda install -c conda-forge matplotlib
 
 ## Projects
 
+HVAC Monitoring : temperature and humidity
+Flow rate Monitoring
+magnet temperature monitoring
+general purpose oscilloscope
+CATs
+QPD
+cavity stabilization lock 
+locking the Vortex laser using an absolute frequency reference (Vutha wavemeter)
+stabilization of external magnetic fields
+
 

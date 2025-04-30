@@ -35,6 +35,8 @@ conda install -c conda-forge matplotlib
 
 ## Projects
 
+[HVAC Monitoring](temperature-humdity/README.md)
+
 ### HVAC Monitoring 
 We use a labjack in conjunction with EL-1050
 : temperature and humidity

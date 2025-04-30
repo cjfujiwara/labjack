@@ -6,7 +6,7 @@ This repository is a collection of code used to run various labjack (and labjack
 
 To get things started on Windows
 
-## Installing Drivers
+## Installing Drivers and Software
 
 Install python manager (for this example, Ananconda)
 
@@ -32,4 +32,7 @@ Then I recommend installing scipy and matplotlib
 conda install -c anaconda scipy
 
 conda install -c conda-forge matplotlib
+
+## Projects
+
 

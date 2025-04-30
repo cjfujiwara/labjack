@@ -2,9 +2,11 @@
 # Settings
 #====================================================================
 
-# LabJack
-myip="192.168.1.125"#470024251 for the lock
-
+# LabJack Identifier
+# It is usually more reliable to choose the correct SN since that is unique to 
+# particular device, while an IP address can be reassigned
+my_ip ="192.168.1.125"
+my_sn = 470024251
 #====================================================================
 # Import Packages
 #====================================================================
@@ -23,7 +25,9 @@ import scipy
 
 # open connection to labjack
 print("Connecting to Labjack")
-T7 = ljm.openS("T7", "ETHERNET", myip) 
+#T7 = ljm.openS("T7", "ETHERNET", my_ip) # If want to choose using IP
+T7 = ljm.openS("T7", "ETHERNET", my_sn) # If want to choose using SN
+
 info = ljm.getHandleInfo(T7)
 print("Opened a LabJack with Device type: %i, Connection type: %i,\n"
       "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" %

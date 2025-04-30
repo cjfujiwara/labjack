@@ -20,9 +20,8 @@ The shim coils propeties will be listed here, as well as some MATLAB code.
 ## Driving Electronics
 The coils are currently driven by a laser diode current controller [LDC 340](https://www.thorlabs.com/thorproduct.cfm?partnumber=LDC340), where the DAC0 output of the labjack drives the analog voltage current control. It has a sensitivity of 400 mA/V using the MOD IN.
 
-## 60 Hz Feedforward
-
 ## LUA PID Code
 
 ## Python Monitoring Code
 
+## 60 Hz Feedforward

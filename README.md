@@ -6,6 +6,8 @@ This repository is a collection of code used to run various labjack (and labjack
 
 To get things started on Windows
 
+## Installing Drivers
+
 Install python manager (for this example, Ananconda)
 
 Install LJM Installers

@@ -30,6 +30,11 @@ This code is the key to running the Big Shim PID. This does the following
 - performs 60 Feedforward
 - outputs the DAC0 [0,5V] to control the current in the Shim
 
+  LUA code in labjack is useful because it does not require an external computer to run it.  This is important because this labjack is not just a monitoring tool, it performs actual feedback. And so it needs to be run outside of any other devices.  See the [LUA scripting page](https://support.labjack.com/docs/25-0-lua-scripting-t-series-datasheet) for information on how to write LUA scripts. The main feature we desire however is that you
+  (1) upload the LUA script
+  (2) save it to memory
+  (3) have it automatically run on device restart
+
 ## Python Monitoring Code
 
 ## 60 Hz Feedforward

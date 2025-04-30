@@ -36,10 +36,15 @@ conda install -c conda-forge matplotlib
 ## Projects
 
 [HVAC Monitoring](temperature-humidity/README.md)
+
 [General Purpose Oscilloscope](temperature-humidity/README.md)
+
 [Cavity Lock](temperature-humidity/README.md)
+
 [Vortex Wavemeter Lock](temperature-humidity/README.md)
+
 [Wavemeter](temperature-humidity/README.md)
+
 [Wavemeter WA-1000](temperature-humidity/README.md)
 
 

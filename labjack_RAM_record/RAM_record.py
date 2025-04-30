@@ -2,14 +2,9 @@
 # Settings
 #====================================================================
 
-# FTP
-pw='SWxpa2VyYXRzYW5kY2F0c3ZlcnltdWNo='
-un='fujiwa27'
-sname='individual.utoronto.ca'
-
 # LabJack
 t7name="OpticalPower"
-myip="192.168.1.126"
+myip="192.168.1.126"#470024251 for the lock
 
 # Log Locations
 drv='/mnt/Y/'
@@ -82,91 +77,6 @@ def grabVoltages():
     results = ljm.eReadNames(T7, numFrames, ains)
     return results   
 
-#====================================================================
-# CSV Logging (incomplete)
-#====================================================================
-
-fields=['time']
-for f in fs:
-    fields.append(f.name + ' (lpm)')
-
-
-# Get the full file name of the log
-def getLogNamePD():
-    tnow=datetime.datetime.now();
-    y=tnow.year
-    m='%02d' % tnow.month
-    d='%02d' % tnow.day
-    f1=drv +fldr +'/' + str(y)
-    f2=f1 + '/' + str(y) + '.' + str(m)
-    fname=f2 + '/' + str(m) + '_' + str(d) + '.csv'
-    
-    if not(os.path.isdir(f1)):
-        os.mkdir(f1)
-        
-    if not(os.path.isdir(f2)):
-        os.mkdir(f2)
-        
-    return fname
- 
-# Write the temperature and relative humidites to file   
-def doLogPD(pds): 
-
-    tnow=datetime.datetime.now()
-    tlabel=tnow.strftime("%m/%d/%Y, %H:%M:%S")
-    # Format the data
-    data=[tlabel]
-    for f in pds:
-        data.append(str(round(f,2)))
-
-    # Get the log name file
-    fname=getLogNamePD()
-        
-    if not(os.path.isfile(fname)):
-        with open(fname,'w') as f:
-            print('Making new log file')
-        
-    # Check if the existing file has the correct headeres
-    with open(fname,'r') as f:
-        reader = csv.reader(f)
-        headers = next(reader, None)
-    
-    # Choose the write mode depending on the read headers        
-    if headers==fields:
-        with open(fname,'a') as f:
-            writer = csv.writer(f)
-            writer.writerow(data)
-            
-    else:
-        with open(fname,'w') as f:
-            writer = csv.writer(f)
-            print('Overwriting old log file as headers dont agree')
-            writer.writerow(fields)  
-            writer.writerow(data)
-              
-#=============================================================================
-# FTP STuff
-#=============================================================================
-
-import base64
-from ftplib import FTP
-
-ftp=FTP(sname)
-#ftp.login(user=un,passwd=base64.b64decode(pw).decode('utf-8'))
-
-def ftpupdate(V):
-    fname='pds'
-    file=open(fname,'w+')
-    
-    file.write(datetime.datetime.now().strftime('%Y/%m/%d %I:%M:%S.%f %p') +'\n')
-
-    for val,Fobj in zip(V,fs):
-        file.write(Fobj.name + ',' + str(round(1000*val,2)) + '\n')    
-    file.close()    
-    filename=fname
-    with open(filename, "rb") as file:        
-        ftp.storbinary("STOR %s" % filename, file)  
-
 
 #=============================================================================
 # Update Function
@@ -207,7 +117,7 @@ def timeUpdate():
     # Update the clock 
     string = datetime.datetime.now().strftime('%H:%M:%S.%f') 
     string2 =  string + ' (' + "%.1f" % round(dT*1000,1) + ' ms)'    
-    string2 = string2 + ", trig=" + "%u" %  round(V[1])
+    string2 = string2 + ", trig=" + "%u" %  round(V[1])  # 0: PID off, 1: sp, 2: stripe
     string2 = string2 + ", sense=" + "%.4f" % round(V[0],4) + ' V'   
     string2 = string2 + ", out=" + "%.4f" % round(V[2],4) + ' V'  
     
@@ -248,13 +158,12 @@ def timeUpdate():
         outmean = data[inds,3].mean()
         outstd = data[inds,3].std()
         
-        string3 = 'Last Data'
-        string3 =  string3 + string + ", sense=" + "%.3f" % round(sensemean,3) + ' +- ' + \
+        string3 =  string + ", sense=" + "%.3f" % round(sensemean,3) + ' +- ' + \
             "%.3f" % round(sensestd,3) + ' V'
         string3 =  string3 + ", out=" + "%.3f" % round(outmean,3) + ' +- ' + \
             "%.3f" % round(outstd,3) + '  V'
         
-        clear_line()
+        #clear_line()
         clear_line()
         print(string3)
     else:
@@ -278,49 +187,51 @@ def timeUpdate():
     
     #lbl.config(text = string2 + ' (' + str(round(dT*1000)) + ' ms)')  
     #print()
-    m2.after(0, timeUpdate) 
+    #m2.after(0, timeUpdate) 
 
 #=============================================================================
 # GUI Objects
 #=============================================================================
 # Main window
-app = tkinter.Tk()
-app.title("Photodiode Monitor")
-app.geometry("800x300")
+#app = tkinter.Tk()
+#app.title("Photodiode Monitor")
+#app.geometry("800x300")
 
 # Clock Frame
-top_frame = tkinter.Frame(app,bd=1,bg="white")
-top_frame.pack(anchor="nw",expand=False,fill="x",side="top")
+#top_frame = tkinter.Frame(app,bd=1,bg="white")
+#top_frame.pack(anchor="nw",expand=False,fill="x",side="top")
 
 # Add clock 
-lbl = tkinter.Label(top_frame,text="Hello",bg="white",font=("DejaVu Sans Mono",18))
-lbl.pack(side="left",anchor="nw")
+#lbl = tkinter.Label(top_frame,text="Hello",bg="white",font=("DejaVu Sans Mono",18))
+#lbl.pack(side="left",anchor="nw")
 
 # Data Frame
-left_frame = tkinter.Frame(app,bd=1,bg="white")
-left_frame.pack(anchor="nw",expand=True,fill="both",side="top")
+#left_frame = tkinter.Frame(app,bd=1,bg="white")
+#left_frame.pack(anchor="nw",expand=True,fill="both",side="top")
 
 # Main string output
-m2 = tkinter.Label(left_frame,text="text",bg="white",font=("DejaVu Sans Mono",50))
-m2.pack(side="left",anchor='nw')    
+#m2 = tkinter.Label(left_frame,text="text",bg="white",font=("DejaVu Sans Mono",50))
+#m2.pack(side="left",anchor='nw')    
 
 # Wait a second
-time.sleep(.5)
+#time.sleep(.5)
 
         
 #=============================================================================
 # Main Loop
 #=============================================================================
 
-print('Last Data : None')
 print('this gets deleted')
 
 # Initiate clock fucntions
-timeUpdate()
+#timeUpdate()
 
 
 # Start the GUI (dont know what this really does)
-app.mainloop()
+#app.mainloop()
+
+while True:
+    timeUpdate()
 
 # Close the labjack connection
 print("Closing the labjack") 
@@ -328,4 +239,4 @@ ljm.close(T7)
 print("I think the labjack closed?")
 
 # Stop the FTP update
-ftp.quit()
+#ftp.quit()

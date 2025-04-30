@@ -3,6 +3,7 @@
 	"trigger" : "DIO0",
 	"analog_channels" : ["AIN0", "AIN1","AIN2","AIN3","AIN4","AIN5","AIN6","AIN7","AIN8","DIO0"],
 	"analog_names" : ["X1","Y1","SUM1","X2","Y2","SUM2","XLATT","YLATT","ZLATT","TRIG"],
+	"analog_ranges" : [10,10,10,10,10,10,10,10,10,0],
 	"scanrate" : 5000,
 	"numscans" : 25000,
 	"scansperread" : 1000,

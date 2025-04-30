@@ -69,6 +69,8 @@ class stream(Thread):
 
         # Read Channels
         self.InputChannels      = None
+        self.InputRanges        = None
+
         self.TriggerChannel     = None       
         self.AcqStatus          = None
         
@@ -766,6 +768,7 @@ class App(tk.Tk):
             
             with open(path, "r") as f:
                 config = json.load(f)
+                print('hello')
                     
                 if "ip_address" in config:
                     self.connectStr.set(config['ip_address'])
@@ -776,6 +779,9 @@ class App(tk.Tk):
                     self.InputChannels = config['analog_channels']                
                     self.InputNames = config['analog_names']
                     self.init_plots()
+                if "analog_ranges" in config:
+                    self.InputRanges = config['analog_ranges']
+                    print(self.InputRanges)
                 if "scanrate" in config:
                     self.scanrate.set(config['scanrate'])                
                 if "numscans" in config:
@@ -836,10 +842,32 @@ class App(tk.Tk):
             val = ljm.eReadName(self.handle, self.OutputChannel) 
             self.output.set(str(np.round(1000*val,1)))
             self.ConnectStatus.config(text='connected',fg='green')
-
+            
+            #ljm.constants.GND=199
+            # sets negative of all to be ground (single-ended)
             ljm.eWriteName(self.handle,'AIN_ALL_NEGATIVE_CH',ljm.constants.GND)
             ljm.eWriteName(self.handle,'AIN0_RANGE',10)
             ljm.eWriteName(self.handle,'AIN1_RANGE',10)
+            
+            if self.InputRanges is not None:
+                print("I have input ranges to update")
+                for ii in range(len(self.InputRanges)):
+                    ch = self.InputChannels[ii]
+                    val = self.InputRanges[ii]
+                    if (ch[:3]=='AIN'):
+                        cmd = ch+'_RANGE';
+                        ljm.eWriteName(self.handle,cmd,val)
+                        print(cmd+' ' + str(val))
+                 
+                    
+            # Set AIN1 to be differential with zero point of AIN0
+            #ljm.eWriteName(self.handle,'AIN0_NEGATIVE_CH',1)
+            # Set Range to be 0.1 V
+            #ljm.eWriteName(self.handle,'AIN0_RANGE',.1)
+            
+            #ljm.eWriteName(self.handle,'STREAM_SETTLING_US',0)
+            #ljm.eWriteName(self.handle,'STREAM_RESOLUTION_INDEX',0)
+
             ljm.eWriteName(self.handle,'STREAM_SETTLING_US',0)
             ljm.eWriteName(self.handle,'STREAM_RESOLUTION_INDEX',0)
 

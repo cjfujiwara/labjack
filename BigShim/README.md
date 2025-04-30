@@ -17,7 +17,9 @@ as not require a stabilization field outside of the 1G range of the device.
 An initial discussion of the Big Shim can be found [here](https://docs.google.com/presentation/d/1-JlIjbozoPRU63ZKhApEn-joSrciZfajlC-b8FjDk5w/edit#slide=id.g2b14b3b4ab5_0_38)
 
 ## Shim Coil
-The shim coils propeties will be listed here, as well as some MATLAB code.
+The shim coils propeties will be listed here, as well as some MATLAB code. As of 2025/04/30 the Big Shim consists of 4 loops of wire wound in a square configuration at the floor of the optical table. This corresponds to a square shape of 5ft x 5ft. This create a field at the location of the atoms at around 4.5 mG/A/turn. So with 4 turns we have a total sensitivity of around 18 mG/A.
+
+(These numbers should be checked, as I haven't checked them in year)
 
 ## Driving Electronics
 The coils are currently driven by a laser diode current controller [LDC 340](https://www.thorlabs.com/thorproduct.cfm?partnumber=LDC340), where the DAC0 output of the labjack drives the analog voltage current control. It has a sensitivity of 400 mA/V using the MOD IN.

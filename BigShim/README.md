@@ -21,6 +21,14 @@ The shim coils propeties will be listed here, as well as some MATLAB code.
 The coils are currently driven by a laser diode current controller [LDC 340](https://www.thorlabs.com/thorproduct.cfm?partnumber=LDC340), where the DAC0 output of the labjack drives the analog voltage current control. It has a sensitivity of 400 mA/V using the MOD IN.
 
 ## LUA PID Code
+This code is the key to running the Big Shim PID. This does the following
+- read in FluxGate sensor value
+- determines the set points
+- reads in whether the PID should be active
+- writes the current field, set point, and PID status to labjack RAM
+- performs PID
+- performs 60 Feedforward
+- outputs the DAC0 [0,5V] to control the current in the Shim
 
 ## Python Monitoring Code
 

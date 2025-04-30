@@ -35,17 +35,20 @@ conda install -c conda-forge matplotlib
 
 ## Projects
 
-[HVAC Monitoring](temperature-humidity/README.md)
+[HVAC Monitoring](temperature-humidity/README.md) - used everyday (circa 2025)
 
-[General Purpose Oscilloscope](temperature-humidity/README.md)
+[General Purpose Oscilloscope](temperature-humidity/README.md) - used everyday (circa 2025)
 
-[Cavity Lock](temperature-humidity/README.md)
+[Stabilization of Ambient Magnetic Field](BigShim/README.md) - used everyday (circa 2025)
 
-[Vortex Wavemeter Lock](temperature-humidity/README.md)
 
-[Wavemeter](temperature-humidity/README.md)
+[Cavity Lock](temperature-humidity/README.md) - last used for PA experiment
 
-[Wavemeter WA-1000](temperature-humidity/README.md)
+[Vortex Wavemeter Lock](temperature-humidity/README.md) - last used for PA experiment
+
+[Wavemeter](temperature-humidity/README.md) - last used for PA experiment
+
+[Wavemeter WA-1000](temperature-humidity/README.md) - last used for PA experiment
 
 
 ### HVAC Monitoring 

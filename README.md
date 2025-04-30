@@ -37,6 +37,8 @@ conda install -c conda-forge matplotlib
 
 [HVAC Monitoring](temperature-humidity/README.md) - used everyday (circa 2025)
 
+[Electromagnet Temperature and Flow Rates](BigShim/README.md) - used everyday (circa 2025)
+
 [General Purpose Oscilloscope](temperature-humidity/README.md) - used everyday (circa 2025)
 
 [Stabilization of Ambient Magnetic Field](BigShim/README.md) - used everyday (circa 2025)

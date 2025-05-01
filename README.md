@@ -57,8 +57,6 @@ We use the labjack for a variety of projects in the laboratory.  Here are they.
 [Cavity Lock](temperature-humidity/README.md) - last used for PA experiment
 
 
-[Wavemeter](temperature-humidity/README.md) - last used for PA experiment
-
 
 
 ### HVAC Monitoring 

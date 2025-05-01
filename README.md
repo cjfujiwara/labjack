@@ -54,9 +54,7 @@ We use the labjack for a variety of projects in the laboratory.  Here are they.
 
 /Vortex [Locking of Vortex using Wavemeter](temperature-humidity/README.md) - last used for PA experiment (2022/2023)
 
-[Cavity Lock](temperature-humidity/README.md) - last used for PA experiment
-
-
+/cavity_lock ["Locking" of ECDL via Cavity](temperature-humidity/README.md) - last used for p-wave experiment (2021)
 
 
 ### HVAC Monitoring 

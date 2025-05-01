@@ -36,21 +36,21 @@ conda install -c conda-forge matplotlib
 ## Projects
 We use the labjack for a variety of projects in the laboratory.  Here are they.
 
-[HVAC Monitoring](temperature-humidity/README.md) - /temperature-humidity used everyday (circa 2025)
+[/temperature-humidity HVAC Monitoring](temperature-humidity/README.md) -  used everyday (circa 2025)
 
-[Electromagnet Temperature and Flow Rates](BigShim/README.md) - /thermistor-flow used everyday (circa 2025)
+[/thermistor-flow Electromagnet Temperature and Flow Rates](BigShim/README.md) - used everyday (circa 2025)
 
-[General Purpose Oscilloscope](temperature-humidity/README.md) - /oscilloscope used everyday (circa 2025)
+[/oscilloscope  General Purpose Oscilloscope](temperature-humidity/README.md) -used everyday (circa 2025)
 
-[Stabilization of Ambient Magnetic Field](BigShim/README.md) - /BigShim used everyday (circa 2025)
+[/BigShim Stabilization of Ambient Magnetic Field](BigShim/README.md) -  used everyday (circa 2025)
 
-[Digital communication with chiller](chillers/README.md) - /chillers used everday (circa 2025)
+[/chillers Digital communication with chiller](chillers/README.md) -  used everday (circa 2025)
 
-[Monitoring of Local Weather](weather/README.md) - /weather used everyday (circa 2025)
+[/weather Monitoring of Local Weather](weather/README.md) -  used everyday (circa 2025)
 
-[Wavemeter WA-1000](Wavemeter WA-1000/README.md) - last used for PA experiment
+[/Wavemeter WA-1000 ](Wavemeter WA-1000/README.md) - last used for PA experiment
 
-[Wavemeter](Wavemter/README.md) - last used for PA experiment
+[/Wavemeter](Wavemter/README.md) - last used for PA experiment
 
 
 [Cavity Lock](temperature-humidity/README.md) - last used for PA experiment

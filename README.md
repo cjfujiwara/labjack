@@ -36,13 +36,13 @@ conda install -c conda-forge matplotlib
 ## Projects
 We use the labjack for a variety of projects in the laboratory.  Here are they.
 
-[HVAC Monitoring](temperature-humidity/README.md) - used everyday (circa 2025)
+[HVAC Monitoring](temperature-humidity/README.md) - /temperature-humidity used everyday (circa 2025)
 
-[Electromagnet Temperature and Flow Rates](BigShim/README.md) - used everyday (circa 2025)
+[Electromagnet Temperature and Flow Rates](BigShim/README.md) - /thermistor-flow used everyday (circa 2025)
 
-[General Purpose Oscilloscope](temperature-humidity/README.md) - used everyday (circa 2025)
+[General Purpose Oscilloscope](temperature-humidity/README.md) - /oscilloscope used everyday (circa 2025)
 
-[Stabilization of Ambient Magnetic Field](BigShim/README.md) - used everyday (circa 2025)
+[Stabilization of Ambient Magnetic Field](BigShim/README.md) - /BigShim used everyday (circa 2025)
 
 
 [Cavity Lock](temperature-humidity/README.md) - last used for PA experiment

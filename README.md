@@ -55,18 +55,3 @@ We use the labjack for a variety of projects in the laboratory.  Here are they.
 /Vortex [Locking of Vortex using Wavemeter](temperature-humidity/README.md) - last used for PA experiment (2022/2023)
 
 /cavity_lock ["Locking" of ECDL via Cavity](temperature-humidity/README.md) - last used for p-wave experiment (2021)
-
-
-### HVAC Monitoring 
-We use a labjack in conjunction with EL-1050
-: temperature and humidity
-Flow rate Monitoring
-magnet temperature monitoring
-general purpose oscilloscope
-CATs
-QPD
-cavity stabilization lock 
-locking the Vortex laser using an absolute frequency reference (Vutha wavemeter)
-stabilization of external magnetic fields
-
-

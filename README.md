@@ -36,17 +36,17 @@ conda install -c conda-forge matplotlib
 ## Projects
 We use the labjack for a variety of projects in the laboratory.  Here are they.
 
-/temperature-humidity [HVAC Monitoring](temperature-humidity/README.md) -  used everyday (circa 2025)
+/temperature-humidity [HVAC Monitoring](temperature-humidity/README.md) -  used everyday (as of 2025)
 
-/thermistor-flow [Electromagnet Temperature and Flow Rates](BigShim/README.md) - used everyday (circa 2025)
+/thermistor-flow [Electromagnet Temperature and Flow Rates](BigShim/README.md) - used everyday (as of 2025)
 
-/oscilloscope [General Purpose Oscilloscope](temperature-humidity/README.md) -used everyday (circa 2025)
+/oscilloscope [General Purpose Oscilloscope](temperature-humidity/README.md) -used everyday (as of 2025)
 
-/BigShim [Stabilization of Ambient Magnetic Field](BigShim/README.md) -  used everyday (circa 2025)
+/BigShim [Stabilization of Ambient Magnetic Field](BigShim/README.md) -  used everyday (as of 2025)
 
-/chillers [Digital communication with chiller](chillers/README.md) -  used everday (circa 2025)
+/chillers [Digital communication with chiller](chillers/README.md) -  used everday (as of 2025)
 
-/weather [Monitoring of Local Weather](weather/README.md) -  used everyday (circa 2025)
+/weather [Monitoring of Local Weather](weather/README.md) -  used everyday (as of 2025)
 
 /Wavemeter WA-1000  [Digital communication with 100 MHz WA-1000 Wavemeter](Wavemeter WA-1000/README.md) - last used for PA experiment
 

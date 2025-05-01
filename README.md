@@ -48,13 +48,17 @@ We use the labjack for a variety of projects in the laboratory.  Here are they.
 
 [Monitoring of Local Weather](weather/README.md) - /weather used everyday (circa 2025)
 
+[Wavemeter WA-1000](Wavemeter WA-1000/README.md) - last used for PA experiment
+
+[Wavemeter](Wavemter/README.md) - last used for PA experiment
+
+
 [Cavity Lock](temperature-humidity/README.md) - last used for PA experiment
 
 [Vortex Wavemeter Lock](temperature-humidity/README.md) - last used for PA experiment
 
 [Wavemeter](temperature-humidity/README.md) - last used for PA experiment
 
-[Wavemeter WA-1000](temperature-humidity/README.md) - last used for PA experiment
 
 
 ### HVAC Monitoring 

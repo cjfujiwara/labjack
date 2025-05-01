@@ -44,6 +44,7 @@ We use the labjack for a variety of projects in the laboratory.  Here are they.
 
 [Stabilization of Ambient Magnetic Field](BigShim/README.md) - /BigShim used everyday (circa 2025)
 
+[Digital communication with chiller](chillers/README.md) - /chillers used everday (circa 2025)
 
 [Cavity Lock](temperature-humidity/README.md) - last used for PA experiment
 

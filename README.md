@@ -22,7 +22,7 @@ For windows. This will install :
 - One you install that stuff. Now you can interact with the labjack normally. BUT we want to run code on python for specific tasks. How do you do that? Well, with anaconda + spyder or whatever thing you want.
 
 
-This will tell you how to instal lthe python drivers
+This will tell you how to instal the python drivers
 https://support.labjack.com/docs/python-for-ljm-windows-mac-linux
 
 https://github.com/labjack/labjack-ljm-python

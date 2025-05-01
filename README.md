@@ -52,10 +52,10 @@ We use the labjack for a variety of projects in the laboratory.  Here are they.
 
 /Wavemeter [Digital Communication with Wavemeter](Wavemter/README.md) - last used for PA experiment
 
+/Vortex [Locking of Vortex using Wavemeter](temperature-humidity/README.md) - last used for PA experiment (2022/2023)
 
 [Cavity Lock](temperature-humidity/README.md) - last used for PA experiment
 
-[Vortex Wavemeter Lock](temperature-humidity/README.md) - last used for PA experiment
 
 [Wavemeter](temperature-humidity/README.md) - last used for PA experiment
 
